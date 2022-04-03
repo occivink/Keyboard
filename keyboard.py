@@ -183,7 +183,7 @@ class ThumbCluster:
 
     def make_shape(self):
         shape = square(0)
-        obj = square([self.keycap_size[0] + 2 * self.offset, self.keycap_size[1] + 2 * self.offset], center=True)
+        obj = square([self.keycap_size[1] + 2 * self.offset, self.keycap_size[0] + 2 * self.offset], center=True)
         for i in range(0,len(self.thumb_curve_points)):
             pos = self.thumb_curve_points[i]
             vec = \
