@@ -2,6 +2,7 @@
 
 from solid import *
 from solid.utils import *
+import sys
 import math
 import bezier
 import triangle as tr
@@ -201,16 +202,16 @@ class ThumbCluster:
 
     def make_switch_holes(self):
         shape = square(0)
-        for i in range(0, tc.get_key_count()):
-            key_pos, key_angle = tc.get_key_coord(i, 0, 0)
+        for i in range(0, self.get_key_count()):
+            key_pos, key_angle = self.get_key_coord(i, 0, 0)
             shape += translate(key_pos)(rotate([0,0,key_angle / math.pi * 180])(
                 square(self.switch_hole_size, center=True)))
         return shape
 
     def make_keycaps(self):
         shape = square(0)
-        for i in range(0, tc.get_key_count()):
-            key_pos, key_angle = tc.get_key_coord(i, 0, 0)
+        for i in range(0, self.get_key_count()):
+            key_pos, key_angle = self.get_key_coord(i, 0, 0)
             shape += translate(key_pos)(rotate([0,0,key_angle / math.pi * 180])(
                 square(self.keycap_size, center=True)))
         return shape
@@ -320,65 +321,70 @@ class Shell:
                 res += translate(key_pos)(square(self.keycap_size, center=True))
         return res
 
-shell_offset = 0.5 # the 'border'
-keycap_size = [18,18]
-keycap_dist = [1,1]
-switch_hole_size = [14,14]
 
-tc = ThumbCluster(
-    key_count = 4,
-    bezier_points = [
-        [0,0],
-            ["POLAR", 3, -5],
-            ["POLAR", 3, 125],
-        [7,-4]
-    ],
-    keycap_size = keycap_size,
-    keycap_dist = keycap_dist,
-    switch_hole_size = switch_hole_size,
-    position = [77, -14],
-    offset = shell_offset,
-    precision = 0.02
-)
+def main() -> int:
+    shell_offset = 0.5 # the 'border'
+    keycap_size = [18,18]
+    keycap_dist = [1,1]
+    switch_hole_size = [14,14]
 
-sh = Shell(rows = 4,
-    columns = 6,
-    keycap_size = keycap_size,
-    keycap_dist = keycap_dist,
-    switch_hole_size = switch_hole_size,
-    thumb_cluster = tc,
-    column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
-    shell_offset = shell_offset,
-    precision = 0.02
-)
+    tc = ThumbCluster(
+        key_count = 4,
+        bezier_points = [
+            [0,0],
+                ["POLAR", 3, -5],
+                ["POLAR", 3, 125],
+            [7,-4]
+        ],
+        keycap_size = keycap_size,
+        keycap_dist = keycap_dist,
+        switch_hole_size = switch_hole_size,
+        position = [77, -14],
+        offset = shell_offset,
+        precision = 0.02
+    )
 
-height=10
-top_height=2
-bot_height=2
-wall_width=1
-bottom_recess=0.1
+    sh = Shell(rows = 4,
+        columns = 6,
+        keycap_size = keycap_size,
+        keycap_dist = keycap_dist,
+        switch_hole_size = switch_hole_size,
+        thumb_cluster = tc,
+        column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
+        shell_offset = shell_offset,
+        precision = 0.02
+    )
 
-shape = square(0)
-shape += tc.make_shape()
-shape += sh.make_shape()
+    height=10
+    top_height=2
+    bot_height=2
+    wall_width=1
+    bottom_recess=0.1
 
-wall = shape - offset(delta=-wall_width)(shape)
-wall = linear_extrude(height=height)(wall)
+    shape = square(0)
+    shape += tc.make_shape()
+    shape += sh.make_shape()
 
-bot = linear_extrude(height=bot_height)(offset(delta=-(wall_width+bottom_recess))(shape))
-switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
-keycaps = tc.make_keycaps() + sh.make_keycaps()
-shape -= switch_holes
-#
-top = linear_extrude(height=top_height)(shape)
-## fake transparent switches
-top += translate([0,0,4])(linear_extrude(height=2)(keycaps)).set_modifier('%')
-top += linear_extrude(height=4)(switch_holes).set_modifier('%')
-top = translate([0,0,height-top_height])(top)
+    wall = shape - offset(delta=-wall_width)(shape)
+    wall = linear_extrude(height=height)(wall)
 
-scad_render_to_file(cube(0)
-    #+ shape
-    + wall
-    + top
-    + bot
-, "out.scad")
+    bot = linear_extrude(height=bot_height)(offset(delta=-(wall_width+bottom_recess))(shape))
+    switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
+    keycaps = tc.make_keycaps() + sh.make_keycaps()
+    shape -= switch_holes
+    #
+    top = linear_extrude(height=top_height)(shape)
+    ## fake transparent switches
+    top += translate([0,0,4])(linear_extrude(height=2)(keycaps)).set_modifier('%')
+    top += linear_extrude(height=4)(switch_holes).set_modifier('%')
+    top = translate([0,0,height-top_height])(top)
+
+    scad_render_to_file(cube(0)
+        #+ shape
+        + wall
+        + top
+        + bot
+    , "out.scad")
+    
+if __name__ == '__main__':
+    sys.exit(main())  # next section explains the use of sys.exit
