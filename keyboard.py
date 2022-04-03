@@ -117,7 +117,6 @@ class ThumbCluster:
             bezier_points,
             position,
             offset,
-            height,
             keycap_size,
             keycap_dist,
             switch_hole_size,
@@ -125,7 +124,6 @@ class ThumbCluster:
         self.key_count = key_count
         self.keycap_size = keycap_size
         self.keycap_dist = keycap_dist
-        self.height = height
         self.switch_hole_size = switch_hole_size
         self.switch_hole_dist = diff_coords(
             sum_coords(self.keycap_size, self.keycap_dist), self.switch_hole_size)
@@ -237,7 +235,7 @@ class ThumbCluster:
         return self.get_key_coord(self.key_count - 1, self.keycap_size[0]/2 + self.offset, -self.keycap_size[1]/2 - self.offset)[0]
 
 class Shell:
-    def __init__(self, rows, columns, keycap_size, keycap_dist, switch_hole_size, column_stagger, height, shell_offset, precision):
+    def __init__(self, rows, columns, keycap_size, keycap_dist, switch_hole_size, column_stagger, shell_offset, precision):
         self.rows = rows
         self.columns = columns
         self.keycap_size = keycap_size
@@ -248,7 +246,6 @@ class Shell:
 
         self.column_stagger = column_stagger
         self.shell_offset = shell_offset
-        self.height = height
         self.precision = precision
 
         panel_top = self.get_key_position(rows-1,columns-1)[1] + self.keycap_size[1] + self.shell_offset
@@ -344,7 +341,6 @@ tc = ThumbCluster(
     keycap_dist = keycap_dist,
     switch_hole_size = switch_hole_size,
     position = [77, -14],
-    height = 2,
     offset = shell_offset,
     precision = 0.02
 )
@@ -355,7 +351,6 @@ sh = Shell(rows = 4,
     keycap_dist = keycap_dist,
     switch_hole_size = switch_hole_size,
     column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
-    height = 2,
     shell_offset = shell_offset,
     precision = 0.02
 )
