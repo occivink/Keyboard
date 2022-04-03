@@ -97,14 +97,11 @@ def diff_coords(*args):
             res[i] -= arg[i]
     return res
 
-def make_switch_hole(pos, angle, height, switch_hole_size, keycap_size):
-    switch = translate([0,0,-1])(
-                linear_extrude(2 * height)(
-                    square(switch_hole_size, center=True))).set_modifier('#')
-    cap = translate([0,0,3])(
-                linear_extrude(1)(
-                    square(keycap_size, center=True))).set_modifier('#')
-    return  translate(pos)(rotate([0,0,angle / math.pi * 180])(switch + cap))
+def make_switch_hole(pos, angle, switch_hole_size, keycap_size):
+    switch = square(switch_hole_size, center=True).set_modifier('#')
+    #cap = translate([0,0,3])(
+    #            square(keycap_size, center=True))).set_modifier('#')
+    return  translate(pos)(rotate([0,0,angle / math.pi * 180])(switch))
 
 
 class ThumbCluster:
@@ -186,8 +183,8 @@ class ThumbCluster:
         ), cap_angle]
 
     def make_shape(self):
-        shape = cube(0)
-        obj = translate([0,0,self.height/2])(cube([self.keycap_size[0] + 2 * self.offset, self.keycap_size[1] + 2 * self.offset, self.height], center=True))
+        shape = square(0)
+        obj = square([self.keycap_size[0] + 2 * self.offset, self.keycap_size[1] + 2 * self.offset], center=True)
         for i in range(0,len(self.thumb_curve_points)):
             pos = self.thumb_curve_points[i]
             vec = \
@@ -204,14 +201,13 @@ class ThumbCluster:
 
 
     def make_switch_holes(self):
-        shape = cube(0)
+        shape = square(0)
         for i in range(0, tc.get_key_count()):
             key_pos, key_angle = tc.get_key_coord(i, 0, 0)
             #(pos, angle, height, switch_hole_size, keycap_size)
             shape += make_switch_hole(
                 key_pos,
                 key_angle,
-                2 * self.height,
                 self.switch_hole_size,
                 self.keycap_size)
         return shape
@@ -303,13 +299,13 @@ class Shell:
         bez = self.bezier_curve
         segments=[[i, (i+1)%len(bez)] for i in range(0,len(bez))]
         tris = tr.triangulate({'vertices':bez, 'segments': segments}, 'p')
-        shape = cube(0)
+        shape = square(0)
         for tri in tris['triangles'].tolist():
-            shape += linear_extrude(self.height)(polygon([bez[tri[0]], bez[tri[1]], bez[tri[2]]]))
+            shape += polygon([bez[tri[0]], bez[tri[1]], bez[tri[2]]])
         return shape
 
     def make_switch_holes(self):
-        res = cube(0)
+        res = square(0)
         #(pos, angle, height, switch_hole_size, keycap_size)
 
         for row in range(0, self.rows):
@@ -317,7 +313,6 @@ class Shell:
                 res += make_switch_hole(
                     self.get_key_position(row,  col,  center=True),
                     0,
-                    2 * self.height,
                     self.switch_hole_size,
                     self.keycap_size)
 
@@ -354,11 +349,26 @@ sh = Shell(rows = 4,
     height = 2,
     shell_offset = shell_offset)
 
-shape = cube(0)
+height=10
+top_height=2
+bot_height=2
+wall_width=1
+bottom_recess=0.1
+
+shape = square(0)
 shape += tc.make_shape()
 shape += sh.make_shape()
+
+wall = shape - offset(delta=-wall_width)(shape)
+wall = linear_extrude(height=10)(wall)
+
+bot = linear_extrude(height=bot_height)(offset(delta=-(wall_width+bottom_recess))(shape))
 shape -= tc.make_switch_holes()
 shape -= sh.make_switch_holes()
+top = translate([0,0,height-top_height])(linear_extrude(height=top_height)(shape))
 
-scad_render_to_file(shape, "out.scad")
-
+scad_render_to_file(cube(0)
+    + wall
+    + top
+    + bot
+, "out.scad")
