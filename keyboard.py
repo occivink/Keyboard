@@ -228,11 +228,12 @@ class ThumbCluster:
         return self.get_key_coord(self.key_count - 1, self.keycap_size[0]/2 + self.offset, -self.keycap_size[1]/2 - self.offset)[0]
 
 class Shell:
-    def __init__(self, rows, columns, keycap_size, keycap_dist, switch_hole_size, column_stagger, shell_offset, precision):
+    def __init__(self, rows, columns, keycap_size, thumb_cluster, keycap_dist, switch_hole_size, column_stagger, shell_offset, precision):
         self.rows = rows
         self.columns = columns
         self.keycap_size = keycap_size
         self.keycap_dist = keycap_dist
+        self.thumb_cluster = thumb_cluster
         self.switch_hole_size = switch_hole_size
         self.switch_hole_dist = diff_coords(
             sum_coords(self.keycap_size, self.keycap_dist), self.switch_hole_size)
@@ -267,13 +268,13 @@ class Shell:
             [panel_left + panel_width, 0],
                 ["RELATIVE", 0, -8],
                 ["POLAR", 12, 125],
-            tc.get_top_right(), # THUMB CLUSTER, TOP RIGHT
+            self.thumb_cluster.get_top_right(), # THUMB CLUSTER, TOP RIGHT
                 ["SHARP"],
                 ["SHARP"],
-            tc.get_bottom_right(),
+            self.thumb_cluster.get_bottom_right(),
                 ["RELATIVE", 0, 40], # random control points
                 ["RELATIVE", 40, 0], # random control points
-            tc.get_bottom_left(),
+            self.thumb_cluster.get_bottom_left(),
                 ["RELATIVE", 0, 15],
                 ["RELATIVE", 5, 0],
             sum_coords(self.get_key_position(0,0), [2*self.keycap_size[1], -shell_offset]),
@@ -345,6 +346,7 @@ sh = Shell(rows = 4,
     keycap_size = keycap_size,
     keycap_dist = keycap_dist,
     switch_hole_size = switch_hole_size,
+    thumb_cluster = tc,
     column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
     shell_offset = shell_offset,
     precision = 0.02
