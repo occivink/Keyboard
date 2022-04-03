@@ -82,10 +82,20 @@ def bezier_closed_line(points, precision=0.1):
         offset += 3
     return res
 
-def sum_coords(a, b):
-    return [a[0] + b[0], a[1] + b[1]]
-def diff_coords(a, b):
-    return [a[0] - b[0], a[1] - b[1]]
+def sum_coords(*args):
+    res = [0 for i in range(0, len(args[0]))]
+    for a in args:
+        for i in range(0, len(res)):
+            res[i] += a[i]
+    return res
+
+def diff_coords(*args):
+    res = [args[0][i] for i in range(0, len(args[0]))]
+    for a in range(1, len(args)):
+        arg = args[a]
+        for i in range(0, len(res)):
+            res[i] -= arg[i]
+    return res
 
 def make_switch_hole(pos, angle, height, switch_hole_size, keycap_size):
     switch = translate([0,0,-1])(
@@ -171,9 +181,8 @@ class ThumbCluster:
         po = perpendicular_offset + self.keycap_size[1]/2
         return [sum_coords(
             key[0],
-            sum_coords([tangent_offset * math.cos(cap_angle), tangent_offset * math.sin(cap_angle)],
-                [po * math.cos(cap_angle + math.pi/2), po * math.sin(cap_angle + math.pi/2)]
-            )
+            [tangent_offset * math.cos(cap_angle), tangent_offset * math.sin(cap_angle)],
+            [po * math.cos(cap_angle + math.pi/2), po * math.sin(cap_angle + math.pi/2)]
         ), cap_angle]
 
     def make_shape(self):
@@ -251,7 +260,7 @@ class Shell:
             sum_coords(self.get_key_position(rows-1,3), [0, self.keycap_size[1] + self.shell_offset]),
                 ["SHARP"],
                 ["SHARP"],
-            sum_coords(self.get_key_position(rows-1,3), sum_coords(self.keycap_size, [0, self.shell_offset])),
+            sum_coords(self.get_key_position(rows-1,3), self.keycap_size, [0, self.shell_offset]),
                 ["POLAR", 15, 0],
                 ["POLAR", 15, 180],
             [panel_left, panel_top],
@@ -283,13 +292,11 @@ class Shell:
     def get_key_position(self, row, col, center=False):
         return sum_coords(
             [self.keycap_size[0]/2, self.keycap_size[1]/2] if center else [0,0],
-            sum_coords(
-                [self.shell_offset, self.shell_offset],
-                [
-                    col * (self.switch_hole_size[0] + self.switch_hole_dist[0]),
-                    (row + self.column_stagger[col]) * (self.switch_hole_size[1] + self.switch_hole_dist[1]),
-                ]
-            )
+            [self.shell_offset, self.shell_offset],
+            [
+                col * (self.switch_hole_size[0] + self.switch_hole_dist[0]),
+                (row + self.column_stagger[col]) * (self.switch_hole_size[1] + self.switch_hole_dist[1]),
+            ]
         )
 
     def make_shape(self):
