@@ -30,7 +30,7 @@ def bezier_from_points(points):
     ys = [points[0][1], points[1][1], points[2][1], points[3][1]]
     return bezier.Curve([xs, ys], degree=3)
 
-def sample_bezier_evenly(curve, precision = 0.05):
+def sample_bezier_evenly(curve, precision):
     res = []
     x = 0
     while True:
@@ -43,6 +43,7 @@ def sample_bezier_evenly(curve, precision = 0.05):
 
 def convert_bezier_points(points):
     res=[]
+    trivial = True
     for i in range(0, len(points)):
         if (i % 3) == 0:
             res.append(points[i])
@@ -53,8 +54,10 @@ def convert_bezier_points(points):
                 if handle[0] == "SHARP":
                     res.append(point)
                 elif handle[0] == "RELATIVE":
+                    trivial = False
                     res.append([point[0] + handle[1], point[1] + handle[2]])
                 elif handle[0] == "POLAR":
+                    trivial = False
                     r = handle[1]
                     angle = handle[2] * math.pi / 180.
                     res.append([point[0] + r * math.cos(angle), point[1] + r * math.sin(angle)])
@@ -62,23 +65,27 @@ def convert_bezier_points(points):
                     print(handle)
                     raise ValueError
             else:
+                trivial = False
                 res.append(handle)
-    return res
+    return res, trivial
 
-def bezier_closed_line(points, precision=0.1):
+def bezier_closed_line(points, precision):
     if len(points) < 6 or len(points) % 3 != 0:
         raise ValueError
     res = []
     offset = 0
     while offset < len(points):
-        curve = bezier_from_points([
-             points[offset],
-             points[offset+1],
-             points[offset+2],
-             points[(offset+3) % len(points)],
-        ])
-
-        res += sample_bezier_evenly(curve, precision)
+        p1 = points[offset]
+        h1 = points[offset+1]
+        h2 = points[offset+2]
+        p2 = points[(offset+3) % len(points)]
+        subset, trivial = convert_bezier_points([p1, h1, h2, p2])
+        if trivial:
+            res.append(p1)
+            res.append(p2)
+        else:
+            curve = bezier_from_points(subset)
+            res += sample_bezier_evenly(curve, precision)
         offset += 3
     return res
 
@@ -114,7 +121,7 @@ class ThumbCluster:
             keycap_size,
             keycap_dist,
             switch_hole_size,
-            precision = 0.01):
+            precision):
         self.key_count = key_count
         self.keycap_size = keycap_size
         self.keycap_dist = keycap_dist
@@ -122,7 +129,8 @@ class ThumbCluster:
         self.switch_hole_size = switch_hole_size
         self.switch_hole_dist = diff_coords(
             sum_coords(self.keycap_size, self.keycap_dist), self.switch_hole_size)
-        self.bezier_curve = bezier_from_points(convert_bezier_points(bezier_points))
+        points_converted, _ = convert_bezier_points(bezier_points)
+        self.bezier_curve = bezier_from_points(points_converted)
         self.curve_target_length = (key_count - 1) * (self.keycap_size[0] + self.keycap_dist[0])
         self.curve_scale_factor = self.curve_target_length / self.bezier_curve.length
         self.thumb_curve_points = sample_bezier_evenly(self.bezier_curve, precision)
@@ -229,7 +237,7 @@ class ThumbCluster:
         return self.get_key_coord(self.key_count - 1, self.keycap_size[0]/2 + self.offset, -self.keycap_size[1]/2 - self.offset)[0]
 
 class Shell:
-    def __init__(self, rows, columns, keycap_size, keycap_dist, switch_hole_size, column_stagger, height, shell_offset):
+    def __init__(self, rows, columns, keycap_size, keycap_dist, switch_hole_size, column_stagger, height, shell_offset, precision):
         self.rows = rows
         self.columns = columns
         self.keycap_size = keycap_size
@@ -241,12 +249,13 @@ class Shell:
         self.column_stagger = column_stagger
         self.shell_offset = shell_offset
         self.height = height
+        self.precision = precision
 
         panel_top = self.get_key_position(rows-1,columns-1)[1] + self.keycap_size[1] + self.shell_offset
         panel_width=22
         panel_height=92
         panel_left = self.get_key_position(0,columns-1)[0] + self.keycap_size[0]
-        casepoints = convert_bezier_points([ # goes clockwise, starting from bottom left
+        casepoints = [ # goes clockwise, starting from bottom left
             sum_coords(self.get_key_position(0,0), [-self.shell_offset, -self.shell_offset]), # BOTTOM LEFT
                 ["SHARP"],
                 ["SHARP"],
@@ -280,9 +289,9 @@ class Shell:
             sum_coords(self.get_key_position(0,0), [2*keycap_size[1], -shell_offset]),
                 ["SHARP"],
                 ["SHARP"],
-        ])
+        ]
 
-        self.bezier_curve = bezier_closed_line(casepoints, .05)
+        self.bezier_curve = bezier_closed_line(casepoints, self.precision)
 
 
     def get_key_position(self, row, col, center=False):
@@ -337,7 +346,7 @@ tc = ThumbCluster(
     position = [77, -14],
     height = 2,
     offset = shell_offset,
-    precision = 0.04
+    precision = 0.02
 )
 
 sh = Shell(rows = 4,
@@ -347,7 +356,9 @@ sh = Shell(rows = 4,
     switch_hole_size = switch_hole_size,
     column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
     height = 2,
-    shell_offset = shell_offset)
+    shell_offset = shell_offset,
+    precision = 0.02
+)
 
 height=10
 top_height=2
@@ -368,6 +379,7 @@ shape -= sh.make_switch_holes()
 top = translate([0,0,height-top_height])(linear_extrude(height=top_height)(shape))
 
 scad_render_to_file(cube(0)
+    #+ shape
     + wall
     + top
     + bot
