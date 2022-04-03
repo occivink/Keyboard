@@ -104,13 +104,6 @@ def diff_coords(*args):
             res[i] -= arg[i]
     return res
 
-def make_switch_hole(pos, angle, switch_hole_size, keycap_size):
-    switch = square(switch_hole_size, center=True).set_modifier('#')
-    #cap = translate([0,0,3])(
-    #            square(keycap_size, center=True))).set_modifier('#')
-    return  translate(pos)(rotate([0,0,angle / math.pi * 180])(switch))
-
-
 class ThumbCluster:
     def __init__(self,
             key_count,
@@ -210,17 +203,17 @@ class ThumbCluster:
         shape = square(0)
         for i in range(0, tc.get_key_count()):
             key_pos, key_angle = tc.get_key_coord(i, 0, 0)
-            #(pos, angle, height, switch_hole_size, keycap_size)
-            shape += make_switch_hole(
-                key_pos,
-                key_angle,
-                self.switch_hole_size,
-                self.keycap_size)
+            shape += translate(key_pos)(rotate([0,0,key_angle / math.pi * 180])(
+                square(self.switch_hole_size, center=True)))
         return shape
 
-    def make_keycap(self, key_index):
-        pos, angle = self.get_key_coord(key_index, 0, 0)
-        return translate(pos)(rotate([0,0,angle*180/math.pi])(square(self.keycap_size, center=True)))
+    def make_keycaps(self):
+        shape = square(0)
+        for i in range(0, tc.get_key_count()):
+            key_pos, key_angle = tc.get_key_coord(i, 0, 0)
+            shape += translate(key_pos)(rotate([0,0,key_angle / math.pi * 180])(
+                square(self.keycap_size, center=True)))
+        return shape
 
     def get_top_left(self):
         return self.get_key_coord(0, -self.keycap_size[0]/2 - self.offset, self.keycap_size[1]/2 + self.offset)[0]
@@ -283,7 +276,7 @@ class Shell:
             tc.get_bottom_left(),
                 ["RELATIVE", 0, 15],
                 ["RELATIVE", 5, 0],
-            sum_coords(self.get_key_position(0,0), [2*keycap_size[1], -shell_offset]),
+            sum_coords(self.get_key_position(0,0), [2*self.keycap_size[1], -shell_offset]),
                 ["SHARP"],
                 ["SHARP"],
         ]
@@ -312,16 +305,18 @@ class Shell:
 
     def make_switch_holes(self):
         res = square(0)
-        #(pos, angle, height, switch_hole_size, keycap_size)
-
         for row in range(0, self.rows):
             for col in range(0, self.columns):
-                res += make_switch_hole(
-                    self.get_key_position(row,  col,  center=True),
-                    0,
-                    self.switch_hole_size,
-                    self.keycap_size)
+                key_pos = self.get_key_position(row,  col,  center=True)
+                res += translate(key_pos)(square(self.switch_hole_size, center=True))
+        return res
 
+    def make_keycaps(self):
+        res = square(0)
+        for row in range(0, self.rows):
+            for col in range(0, self.columns):
+                key_pos = self.get_key_position(row,  col,  center=True)
+                res += translate(key_pos)(square(self.keycap_size, center=True))
         return res
 
 shell_offset = 0.5 # the 'border'
@@ -366,12 +361,18 @@ shape += tc.make_shape()
 shape += sh.make_shape()
 
 wall = shape - offset(delta=-wall_width)(shape)
-wall = linear_extrude(height=10)(wall)
+wall = linear_extrude(height=height)(wall)
 
 bot = linear_extrude(height=bot_height)(offset(delta=-(wall_width+bottom_recess))(shape))
-shape -= tc.make_switch_holes()
-shape -= sh.make_switch_holes()
-top = translate([0,0,height-top_height])(linear_extrude(height=top_height)(shape))
+switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
+keycaps = tc.make_keycaps() + sh.make_keycaps()
+shape -= switch_holes
+#
+top = linear_extrude(height=top_height)(shape)
+## fake transparent switches
+top += translate([0,0,4])(linear_extrude(height=2)(keycaps)).set_modifier('%')
+top += linear_extrude(height=4)(switch_holes).set_modifier('%')
+top = translate([0,0,height-top_height])(top)
 
 scad_render_to_file(cube(0)
     #+ shape
