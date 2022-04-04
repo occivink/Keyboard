@@ -243,10 +243,6 @@ class Shell:
         self.shell_offset = shell_offset
         self.precision = precision
 
-        panel_top = self.get_key_position(rows-1,columns-1)[1] + self.keycap_size[1] + self.shell_offset
-        panel_width=22
-        panel_height=92
-        panel_left = self.get_key_position(0,columns-1)[0] + self.keycap_size[0]
         casepoints = [ # goes clockwise, starting from bottom left
             sum_coords(self.get_key_position(0,0), [-self.shell_offset, -self.shell_offset]), # BOTTOM LEFT
                 ["SHARP"],
@@ -260,13 +256,13 @@ class Shell:
             sum_coords(self.get_key_position(rows-1,3), self.keycap_size, [0, self.shell_offset]),
                 ["POLAR", 15, 0],
                 ["POLAR", 15, 180],
-            [panel_left, panel_top],
+            [self.panel_left(), self.panel_top()],
                 ["SHARP"],
                 ["SHARP"],
-            [panel_left + panel_width, panel_top], # TOP RIGHT
+            [self.panel_left() + self.panel_width(), self.panel_top()], # TOP RIGHT
                 ["SHARP"],
                 ["SHARP"],
-            [panel_left + panel_width, 0],
+            [self.panel_left() + self.panel_width(), 0],
                 ["RELATIVE", 0, -8],
                 ["POLAR", 12, 125],
             self.thumb_cluster.get_top_right(), # THUMB CLUSTER, TOP RIGHT
@@ -285,6 +281,17 @@ class Shell:
 
         self.bezier_curve = bezier_closed_line(casepoints, self.precision)
 
+
+    def panel_top(self):
+        return  self.get_key_position(self.rows-1,self.columns-1)[1] + self.keycap_size[1] + self.shell_offset
+    def panel_width(self):
+        return 22
+    def panel_height(self):
+        return 92
+    def panel_left(self):
+        return  self.get_key_position(0,self.columns-1)[0] + self.keycap_size[0]
+    def panel_right(self):
+        return  self.panel_left() + self.panel_width()
 
     def get_key_position(self, row, col, center=False):
         return sum_coords(
@@ -319,6 +326,41 @@ class Shell:
             for col in range(0, self.columns):
                 key_pos = self.get_key_position(row,  col,  center=True)
                 res += translate(key_pos)(square(self.keycap_size, center=True))
+        return res
+
+class JackSocket:
+    outer_cyl_diam = 7
+    outer_cyl_height = 5
+    inner_cyl_1_diam = 9
+    inner_cyl_1_height = 1.8
+    inner_cyl_2_diam = 8
+    inner_cyl_2_height = 10
+
+    hex_nut_small_width = 10
+    hex_nut_diam = hex_nut_small_width * 2.3094 / 2
+    hex_nut_height = 2
+
+    def __init__(self, pos, height, nut_offset):
+        self.pos = pos
+        self.height = height
+        self.nut_offset = nut_offset
+
+    def make_shape(self):
+        res = cube(0)
+        res += translate([0,0,-self.nut_offset-self.hex_nut_height])(
+            rotate([0,0,90])(cylinder(d=self.hex_nut_diam, h=self.hex_nut_height, segments=6))
+        )
+        res += translate([0,0,-self.outer_cyl_height])(
+            cylinder(d=self.outer_cyl_diam, h=self.outer_cyl_height, segments=20)
+        )
+        res += translate([0,0,0])(
+            cylinder(d=self.inner_cyl_1_diam, h=self.inner_cyl_1_height, segments=20)
+        )
+        res += translate([0,0,self.inner_cyl_1_height])(
+            cylinder(d=self.inner_cyl_2_diam, h=self.inner_cyl_2_height, segments=20)
+        )
+        res = rotate([0,-90,0])(res)
+        res = translate(self.pos)(translate([0,0,self.height])(res))
         return res
 
 
@@ -363,6 +405,13 @@ def main() -> int:
     wall_full_width=wall_outer_width + wall_inner_width
     bottom_recess=0.1
 
+    jack = JackSocket(
+        pos = [sh.panel_right() - wall_full_width , 10],
+        height = height/2,
+        nut_offset = wall_full_width,
+    )
+
+
     shape = square(0)
     shape += tc.make_shape()
     shape += sh.make_shape()
@@ -388,10 +437,10 @@ def main() -> int:
     top = translate([0,0,height-top_height])(top)
 
     scad_render_to_file(cube(0)
-        #+ shape
-        + wall
+        + shape
+        + (wall - jack.make_shape().set_modifier('%'))
         + top
-        #+ bot
+        + bot
     , "out.scad")
 
     return 0
