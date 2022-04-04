@@ -323,7 +323,7 @@ class Shell:
 
 
 def main() -> int:
-    shell_offset = 0.5 # the 'border'
+    shell_offset = 1 # the 'border'
     keycap_size = [18,18]
     keycap_dist = [1,1]
     switch_hole_size = [14,14]
