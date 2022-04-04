@@ -358,23 +358,31 @@ def main() -> int:
     height=10
     top_height=2
     bot_height=2
-    wall_width=1
+    wall_outer_width=1
+    wall_inner_width=1
+    wall_full_width=wall_outer_width + wall_inner_width
     bottom_recess=0.1
 
     shape = square(0)
     shape += tc.make_shape()
     shape += sh.make_shape()
 
-    wall = shape - offset(delta=-wall_width)(shape)
-    wall = linear_extrude(height=height)(wall)
+    wall_inner = translate([0,0,bot_height])(linear_extrude(height=height - bot_height)(
+        offset(delta=-wall_outer_width)(shape) - offset(delta=-wall_full_width)(shape)
+    ))
+    wall_outer = linear_extrude(height=height)(
+        shape - offset(delta=-wall_outer_width)(shape)
+    )
+    wall = wall_inner + wall_outer
 
-    bot = linear_extrude(height=bot_height)(offset(delta=-(wall_width+bottom_recess))(shape))
+    bot = linear_extrude(height=bot_height)(
+        offset(delta=-(wall_outer_width + bottom_recess))(shape))
     switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
     keycaps = tc.make_keycaps() + sh.make_keycaps()
     shape -= switch_holes
     #
     top = linear_extrude(height=top_height)(shape)
-    ## fake transparent switches
+    # fake transparent switches
     top += translate([0,0,4])(linear_extrude(height=2)(keycaps)).set_modifier('%')
     top += linear_extrude(height=4)(switch_holes).set_modifier('%')
     top = translate([0,0,height-top_height])(top)
@@ -383,8 +391,10 @@ def main() -> int:
         #+ shape
         + wall
         + top
-        + bot
+        #+ bot
     , "out.scad")
-    
+
+    return 0
+
 if __name__ == '__main__':
-    sys.exit(main())  # next section explains the use of sys.exit
+    sys.exit(main())
