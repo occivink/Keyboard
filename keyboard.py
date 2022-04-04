@@ -285,7 +285,7 @@ class Shell:
     def panel_top(self):
         return  self.get_key_position(self.rows-1,self.columns-1)[1] + self.keycap_size[1] + self.shell_offset
     def panel_width(self):
-        return 22
+        return 24
     def panel_height(self):
         return 92
     def panel_left(self):
@@ -327,6 +327,68 @@ class Shell:
                 key_pos = self.get_key_position(row,  col,  center=True)
                 res += translate(key_pos)(square(self.keycap_size, center=True))
         return res
+
+class Controller:
+    board_width = 21
+    board_length = 51.2
+    board_height = 1.1
+
+    holes_diam = 2.1
+    holes_dist_to_side_edge = 4.8
+    holes_dist_to_top_edge = 2
+    #pillarheight = 3
+    #pillardiam = 4
+
+    #distancetowall = 0.2
+
+    usb_height = 3
+    usb_width = 8.5
+    usb_length = 5.7
+
+    usb_protursion = 1.5
+
+    board_edge_to_cable_shell = 2.4 # distance between board edge to cable shell
+    usb_bottom_from_board_bottom = 0.7 # distance from board bottom to usb socket bottom
+
+    def __init__(self, pos, height):
+        self.pos = pos
+        self.height = height
+
+    def make_shape(self):
+        board = cube([self.board_width, self.board_length, self.board_height])
+        for x in [self.holes_dist_to_side_edge, self.board_width - self.holes_dist_to_side_edge]:
+            for y in [self.holes_dist_to_top_edge, self.board_length - self.holes_dist_to_top_edge]:
+                board -= translate([x,y])(cylinder(d=self.holes_diam, h=self.board_height, segments=20))
+
+        usb = cube([self.usb_width, self.usb_length, self.usb_height])
+        usb = translate([self.board_width/2-self.usb_width/2, 0])(usb)
+        usb = translate([0, self.board_length - self.usb_length + self.usb_protursion])(usb)
+        usb = translate([0,0,self.usb_bottom_from_board_bottom])(usb)
+
+        board += usb
+
+        return self.move_into_place(board + usb)
+
+    def make_usb_hole(self):
+        usb = cube([self.usb_width, self.usb_length * 2, self.usb_height])
+        usb = translate([self.board_width/2-self.usb_width/2, 0])(usb)
+        usb = translate([0, self.board_length - self.usb_length + self.usb_protursion])(usb)
+        usb = translate([0,0,self.usb_bottom_from_board_bottom])(usb)
+
+        return self.move_into_place(usb)
+
+    def move_into_place(self, obj):
+        obj = translate([-self.board_width,-self.board_length - self.board_edge_to_cable_shell])(obj)
+        return translate(self.pos)(translate([0,0,self.height])(obj))
+
+    def make_bottom_support(self):
+        res = cube(0)
+        return res
+
+    def make_top_support(self):
+        res = cube(0)
+        return res
+
 
 class JackSocket:
     outer_cyl_diam = 7
@@ -383,7 +445,7 @@ def main() -> int:
         switch_hole_size = switch_hole_size,
         position = [77, -14],
         offset = shell_offset,
-        precision = 0.02
+        precision = 0.08
     )
 
     sh = Shell(rows = 4,
@@ -394,7 +456,7 @@ def main() -> int:
         thumb_cluster = tc,
         column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
         shell_offset = shell_offset,
-        precision = 0.02
+        precision = 0.08
     )
 
     height=10
@@ -411,6 +473,11 @@ def main() -> int:
         nut_offset = wall_full_width,
     )
 
+    controller = Controller(
+        pos = [sh.panel_right(),sh.panel_top()],
+        height = height/4,
+    )
+
 
     shape = square(0)
     shape += tc.make_shape()
@@ -422,24 +489,34 @@ def main() -> int:
     wall_outer = linear_extrude(height=height)(
         shape - offset(delta=-wall_outer_width)(shape)
     )
+    jack_shape = jack.make_shape()
     wall = wall_inner + wall_outer
+    wall -= jack_shape
+    wall -= controller.make_usb_hole()
 
     bot = linear_extrude(height=bot_height)(
         offset(delta=-(wall_outer_width + bottom_recess))(shape))
+    bot -= jack_shape
+
     switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
     keycaps = tc.make_keycaps() + sh.make_keycaps()
-    shape -= switch_holes
-    #
-    top = linear_extrude(height=top_height)(shape)
-    # fake transparent switches
-    top += translate([0,0,4])(linear_extrude(height=2)(keycaps)).set_modifier('%')
-    top += linear_extrude(height=4)(switch_holes).set_modifier('%')
+
+    top = linear_extrude(height=top_height)(shape - switch_holes)
     top = translate([0,0,height-top_height])(top)
+    top -= jack_shape
+
+    phantoms = cube(0)
+    phantoms += translate([0,0,4])(linear_extrude(height=2)(keycaps))
+    phantoms += linear_extrude(height=4)(switch_holes)
+    phantoms = translate([0,0,height-top_height])(phantoms)
+    phantoms += controller.make_shape()
+    phantoms += jack.make_shape()
+    phantoms = phantoms.set_modifier('%')
 
     scad_render_to_file(cube(0)
-        + shape
-        + (wall - jack.make_shape().set_modifier('%'))
-        + top
+        + wall
+        #+ phantoms
+        #+ top
         + bot
     , "out.scad")
 
