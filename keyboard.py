@@ -360,10 +360,9 @@ class Controller:
     holes_diam = 2.1
     holes_dist_to_side_edge = 4.8
     holes_dist_to_top_edge = 2
-    #pillarheight = 3
-    #pillardiam = 4
 
-    #distancetowall = 0.2
+    button_dist_to_left = 7
+    button_dist_to_top = 12.5
 
     usb_height = 3
     usb_width = 8.5
@@ -374,9 +373,11 @@ class Controller:
     board_edge_to_cable_shell = 2.4 # distance between board edge to cable shell
     usb_bottom_from_board_bottom = 0.7 # distance from board bottom to usb socket bottom
 
-    def __init__(self, pos, height):
+    def __init__(self, pos, height, total_height, pillar_diam):
         self.pos = pos
         self.height = height
+        self.total_height = total_height
+        self.pillar_diam = pillar_diam
 
     def make_shape(self):
         board = cube([self.board_width, self.board_length, self.board_height])
@@ -401,17 +402,25 @@ class Controller:
 
         return self.move_into_place(usb)
 
-    def move_into_place(self, obj):
+    def move_into_place(self, obj, with_height = True):
         obj = translate([-self.board_width,-self.board_length - self.board_edge_to_cable_shell])(obj)
-        return translate(self.pos)(translate([0,0,self.height])(obj))
+        return translate(self.pos)(translate([0,0,self.height if with_height else 0])(obj))
 
     def make_bottom_support(self):
         res = cube(0)
-        return res
+        for x in [self.holes_dist_to_side_edge, self.board_width - self.holes_dist_to_side_edge]:
+            for y in [self.holes_dist_to_top_edge, self.board_length - self.holes_dist_to_top_edge]:
+                res += translate([x,y])(cylinder(d=self.pillar_diam, h=self.height,segments=20))
+        return self.move_into_place(res, with_height = False)
 
     def make_top_support(self):
         res = cube(0)
-        return res
+        for x in [self.holes_dist_to_side_edge, self.board_width - self.holes_dist_to_side_edge]:
+            for y in [self.holes_dist_to_top_edge, self.board_length - self.holes_dist_to_top_edge]:
+                res += translate([x,y])(cylinder(d=self.holes_diam, h=self.board_height, segments=20))
+                res += translate([x,y,self.board_height])(
+                    cylinder(d=self.pillar_diam, h=self.total_height - self.height - self.board_height, segments=20))
+        return self.move_into_place(res)
 
 
 class JackSocket:
@@ -499,7 +508,9 @@ def main() -> int:
 
     controller = Controller(
         pos = [sh.panel_right(),sh.panel_top()],
-        height = height/4,
+        height = height/3,
+        total_height = height,
+        pillar_diam = 4,
     )
 
     weights = []
@@ -541,6 +552,7 @@ def main() -> int:
     top = linear_extrude(height=top_height)(shape - switch_holes)
     top = translate([0,0,height-top_height])(top)
     top -= jack_shape
+    top += controller.make_top_support()
 
     phantoms = cube(0)
     phantoms += translate([0,0,4])(linear_extrude(height=2)(keycaps))
