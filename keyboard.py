@@ -328,6 +328,30 @@ class Shell:
                 res += translate(key_pos)(square(self.keycap_size, center=True))
         return res
 
+class WeightedDisc:
+    disc_height=1.6
+    disc_diam=35
+    disc_hole_diam=8.6
+
+    def __init__(self, pos, number, extra_diam, disc_dist_from_bot, disc_dist_to_top):
+        self.pos = pos
+        self.number_discs = number
+        self.extra_diam = extra_diam
+        self.disc_dist_from_bot = disc_dist_from_bot
+        self.disc_dist_to_top = disc_dist_to_top
+
+    def make_discs(self):
+        discs = cylinder(d=self.disc_diam, h=self.number_discs * self.disc_height)
+        discs -= cylinder(d=self.disc_hole_diam, h=self.number_discs * self.disc_height)
+        return translate([0,0,self.disc_dist_from_bot])(translate(self.pos)(discs))
+
+    def get_diameter(self):
+        return self.disc_diam + self.extra_diam
+
+    def make_shape(self):
+        return translate(self.pos)(cylinder(d = self.disc_diam + self.extra_diam,
+            h = self.number_discs * self.disc_height + self.disc_dist_from_bot + self.disc_dist_to_top))
+
 class Controller:
     board_width = 21
     board_length = 51.2
@@ -478,6 +502,14 @@ def main() -> int:
         height = height/4,
     )
 
+    weights = []
+    for pos in [[22,21], [22, 57], [60,21], [60, 60], [98,10]]:
+        weights.append(WeightedDisc(
+            pos = pos,
+            number = 1,
+            extra_diam = 3,
+            disc_dist_from_bot = 0.4,
+            disc_dist_to_top = 0.4))
 
     shape = square(0)
     shape += tc.make_shape()
@@ -497,6 +529,11 @@ def main() -> int:
     bot = linear_extrude(height=bot_height)(
         offset(delta=-(wall_outer_width + bottom_recess))(shape))
     bot -= jack_shape
+    for weight in weights:
+        bot += weight.make_shape()
+    for weight in weights:
+        bot -= weight.make_discs()
+    bot += controller.make_bottom_support()
 
     switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
     keycaps = tc.make_keycaps() + sh.make_keycaps()
