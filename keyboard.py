@@ -431,7 +431,7 @@ class Screw:
     nut_height = 1.2
     nut_flat_width = 4.1
 
-    extra_support_height_bot = 0.6
+    extra_support_height_bot = 1
 
     nut_diameter = 2.3094 * nut_flat_width / 2
     nut_holder_diameter =  1.2 * nut_diameter
@@ -458,12 +458,12 @@ class Screw:
 
     def make_top_shape(self):
         cyl = cylinder(d = self.pillar_diam, h = self.thread_height - self.extra_support_height_bot, segments=20)
-        cyl = translate([0,0,self.head_height + self.extra_support_height_bot])(cyl)
+        cyl = translate([0,0,self.head_height + self.extra_support_height_bot + self.z_elevation])(cyl)
         return translate(self.xy_pos)(cyl)
 
     def make_bot_shape(self):
         head_hole_height = self.head_height + self.z_elevation
-        cyl = cylinder(d=self.head_diameter * 1.25, h=head_hole_height + self.extra_support_height_bot, segments=20)
+        cyl = cylinder(d=self.pillar_diam, h=head_hole_height + self.extra_support_height_bot, segments=20)
         return translate(self.xy_pos)(cyl)
 
 class JackSocket:
@@ -566,7 +566,7 @@ def main() -> int:
             disc_dist_to_top = 0.4))
 
     screws = []
-    for pos in [[40,4], [35,79], [79,82.5], [132,-4]]:
+    for pos in [[40,4], [35,78], [77.8,82.2], [132,-4]]:
         screws.append(Screw(
             xy_pos = pos,
             pillar_diam = 7,
