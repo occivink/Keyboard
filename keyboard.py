@@ -330,8 +330,8 @@ class Shell:
 
 class WeightedDisc:
     disc_height=1.6
-    disc_diam=35
-    disc_hole_diam=8.6
+    disc_diam=35.4
+    disc_hole_diam=9
 
     def __init__(self, pos, number, extra_diam, disc_dist_from_bot, disc_dist_to_top):
         self.pos = pos
