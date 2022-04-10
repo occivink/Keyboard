@@ -588,8 +588,8 @@ def main() -> int:
     wall -= jack_shape
     wall -= controller.make_usb_hole()
 
-    bot = linear_extrude(height=bot_height)(
-        offset(delta=-(wall_outer_width + bottom_recess))(shape))
+    bot_shape = offset(delta=-(wall_outer_width + bottom_recess))(shape)
+    bot = linear_extrude(height=bot_height)(bot_shape)
     bot -= jack_shape
     for weight in weights:
         bot += weight.make_shape()
@@ -600,6 +600,7 @@ def main() -> int:
     for screw in screws:
         bot -= screw.make_bot_hole()
     bot += controller.make_bottom_support()
+    bot *= linear_extrude(height=height)(bot_shape)
 
     switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
 
