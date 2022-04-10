@@ -341,8 +341,8 @@ class WeightedDisc:
         self.disc_dist_to_top = disc_dist_to_top
 
     def make_discs(self):
-        discs = cylinder(d=self.disc_diam, h=self.number_discs * self.disc_height, segments=20)
-        discs -= cylinder(d=self.disc_hole_diam, h=self.number_discs * self.disc_height, segments=20)
+        discs = cylinder(d=self.disc_diam, h=self.number_discs * self.disc_height, segments=40)
+        discs -= cylinder(d=self.disc_hole_diam, h=self.number_discs * self.disc_height, segments=40)
         return translate([0,0,self.disc_dist_from_bot])(translate(self.pos)(discs))
 
     def get_diameter(self):
@@ -350,7 +350,7 @@ class WeightedDisc:
 
     def make_shape(self):
         return translate(self.pos)(cylinder(d = self.disc_diam + self.extra_diam,
-            h = self.number_discs * self.disc_height + self.disc_dist_from_bot + self.disc_dist_to_top, segments=20))
+            h = self.number_discs * self.disc_height + self.disc_dist_from_bot + self.disc_dist_to_top, segments=40))
 
 class Controller:
     board_width = 21
