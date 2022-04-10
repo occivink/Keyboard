@@ -620,12 +620,12 @@ def main() -> int:
 
     top = linear_extrude(height=top_height)(shape - switch_holes)
     top = translate([0,0,height-top_height])(top)
-    top += wall
-    top -= jack_hole
-    wall -= controller.make_usb_hole()
+    top += (wall - bot)
     top += controller.make_top_support()
     for screw in screws:
         top += screw.make_top_shape()
+    top -= jack_hole
+    top -= controller.make_usb_hole()
     for screw in screws:
         top -= screw.make_top_hole()
 
