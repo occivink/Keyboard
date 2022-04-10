@@ -501,6 +501,23 @@ class JackSocket:
         res = translate(self.pos)(translate([0,0,self.height])(res))
         return res
 
+    def make_hole(self):
+        res = cube(0)
+        #res += translate([0,0,-self.nut_offset-self.hex_nut_height])(
+        #    rotate([0,0,90])(cylinder(d=self.hex_nut_diam, h=self.hex_nut_height, segments=6))
+        #)
+        res += translate([0,0,-self.outer_cyl_height])(
+            cylinder(d=self.outer_cyl_diam, h=self.outer_cyl_height, segments=20)
+        )
+        res += translate([0,0,0])(
+            cylinder(
+                d=max(self.inner_cyl_1_diam, self.inner_cyl_2_diam),
+                h=self.inner_cyl_1_height + self.inner_cyl_2_height + 1,
+                segments=20)
+        )
+        res = rotate([0,-90,0])(res)
+        res = translate(self.pos)(translate([0,0,self.height])(res))
+        return res
 
 def main() -> int:
     shell_offset = 1 # the 'border'
@@ -583,14 +600,12 @@ def main() -> int:
     wall_outer = linear_extrude(height=height)(
         shape - offset(delta=-wall_outer_width)(shape)
     )
-    jack_shape = jack.make_shape()
+    jack_hole = jack.make_hole()
     wall = wall_inner + wall_outer
-    wall -= jack_shape
-    wall -= controller.make_usb_hole()
 
     bot_shape = offset(delta=-(wall_outer_width + bottom_recess))(shape)
     bot = linear_extrude(height=bot_height)(bot_shape)
-    bot -= jack_shape
+    bot -= jack_hole
     for weight in weights:
         bot += weight.make_shape()
     for screw in screws:
@@ -607,7 +622,8 @@ def main() -> int:
     top = linear_extrude(height=top_height)(shape - switch_holes)
     top = translate([0,0,height-top_height])(top)
     top += wall
-    top -= jack_shape
+    top -= jack_hole
+    wall -= controller.make_usb_hole()
     top += controller.make_top_support()
     for screw in screws:
         top += screw.make_top_shape()
