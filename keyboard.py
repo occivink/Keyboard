@@ -364,14 +364,14 @@ class Controller:
     button_dist_to_left = 7
     button_dist_to_top = 12.5
 
-    usb_height = 3
+    usb_height = 3.2
     usb_width = 8.5
     usb_length = 5.7
 
     usb_protursion = 1.5
 
-    board_edge_to_cable_shell = 2.4 # distance between board edge to cable shell
-    usb_bottom_from_board_bottom = 0.7 # distance from board bottom to usb socket bottom
+    board_edge_to_cable_shell = 2.5 # distance between board edge to cable shell
+    usb_bottom_from_board_bottom = 0.5 # distance from board bottom to usb socket bottom
 
     def __init__(self, pos, height, total_height, pillar_diam):
         self.pos = pos
