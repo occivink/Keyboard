@@ -341,8 +341,8 @@ class WeightedDisc:
         self.disc_dist_to_top = disc_dist_to_top
 
     def make_discs(self):
-        discs = cylinder(d=self.disc_diam, h=self.number_discs * self.disc_height)
-        discs -= cylinder(d=self.disc_hole_diam, h=self.number_discs * self.disc_height)
+        discs = cylinder(d=self.disc_diam, h=self.number_discs * self.disc_height, segments=20)
+        discs -= cylinder(d=self.disc_hole_diam, h=self.number_discs * self.disc_height, segments=20)
         return translate([0,0,self.disc_dist_from_bot])(translate(self.pos)(discs))
 
     def get_diameter(self):
@@ -350,7 +350,7 @@ class WeightedDisc:
 
     def make_shape(self):
         return translate(self.pos)(cylinder(d = self.disc_diam + self.extra_diam,
-            h = self.number_discs * self.disc_height + self.disc_dist_from_bot + self.disc_dist_to_top))
+            h = self.number_discs * self.disc_height + self.disc_dist_from_bot + self.disc_dist_to_top, segments=20))
 
 class Controller:
     board_width = 21
@@ -422,6 +422,49 @@ class Controller:
                     cylinder(d=self.pillar_diam, h=self.total_height - self.height - self.board_height, segments=20))
         return self.move_into_place(res)
 
+class Screw:
+    thread_diameter = 2
+    thread_height = 6
+    head_height = 2
+    head_diameter = 3.9
+
+    nut_height = 1.2
+    nut_flat_width = 4.1
+
+    extra_support_height_bot = 0.6
+
+    nut_diameter = 2.3094 * nut_flat_width / 2
+    nut_holder_diameter =  1.2 * nut_diameter
+
+    def __init__(self, xy_pos, pillar_diam, z_elevation, top_height):
+        self.xy_pos = xy_pos
+        self.pillar_diam = pillar_diam
+        self.z_elevation = z_elevation
+        self.top_height = top_height
+
+    def make_top_hole(self):
+        nut_z_pos = self.z_elevation + self.head_height + self.thread_height - self.nut_height
+        nut_hole = cylinder(d=self.nut_diameter, h=self.nut_height, segments=6)
+        res = translate([0,0,nut_z_pos])(nut_hole)
+        thread_hole = cylinder(d=self.thread_diameter, h=self.thread_height, segments=20)
+        res += translate([0,0,self.z_elevation + self.head_height])(thread_hole)
+        return translate(self.xy_pos)(res)
+
+    def make_bot_hole(self):
+        head_hole_height = self.head_height + self.z_elevation
+        cyl = cylinder(d=self.head_diameter, h=head_hole_height, segments=20)
+        cyl += translate([0,0,head_hole_height])(cylinder(d=self.thread_diameter, h=self.thread_height, segments=20))
+        return translate(self.xy_pos)(cyl)
+
+    def make_top_shape(self):
+        cyl = cylinder(d = self.pillar_diam, h = self.thread_height - self.extra_support_height_bot, segments=20)
+        cyl = translate([0,0,self.head_height + self.extra_support_height_bot])(cyl)
+        return translate(self.xy_pos)(cyl)
+
+    def make_bot_shape(self):
+        head_hole_height = self.head_height + self.z_elevation
+        cyl = cylinder(d=self.head_diameter * 1.25, h=head_hole_height + self.extra_support_height_bot, segments=20)
+        return translate(self.xy_pos)(cyl)
 
 class JackSocket:
     outer_cyl_diam = 7
@@ -518,9 +561,17 @@ def main() -> int:
         weights.append(WeightedDisc(
             pos = pos,
             number = 1,
-            extra_diam = 3,
+            extra_diam = 2,
             disc_dist_from_bot = 0.4,
             disc_dist_to_top = 0.4))
+
+    screws = []
+    for pos in [[40,4], [35,79], [79,82.5], [132,-4]]:
+        screws.append(Screw(
+            xy_pos = pos,
+            pillar_diam = 7,
+            z_elevation = 1,
+            top_height = 1))
 
     shape = square(0)
     shape += tc.make_shape()
@@ -542,18 +593,27 @@ def main() -> int:
     bot -= jack_shape
     for weight in weights:
         bot += weight.make_shape()
+    for screw in screws:
+        bot += screw.make_bot_shape()
     for weight in weights:
         bot -= weight.make_discs()
+    for screw in screws:
+        bot -= screw.make_bot_hole()
     bot += controller.make_bottom_support()
 
     switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
-    keycaps = tc.make_keycaps() + sh.make_keycaps()
 
     top = linear_extrude(height=top_height)(shape - switch_holes)
     top = translate([0,0,height-top_height])(top)
+    top += wall
     top -= jack_shape
     top += controller.make_top_support()
+    for screw in screws:
+        top += screw.make_top_shape()
+    for screw in screws:
+        top -= screw.make_top_hole()
 
+    keycaps = tc.make_keycaps() + sh.make_keycaps()
     phantoms = cube(0)
     phantoms += translate([0,0,4])(linear_extrude(height=2)(keycaps))
     phantoms += linear_extrude(height=4)(switch_holes)
@@ -562,10 +622,12 @@ def main() -> int:
     phantoms += jack.make_shape()
     phantoms = phantoms.set_modifier('%')
 
+    #top *= translate([113,25])(cube([50,100,50])) # test the controller
+    #top *= translate([116,0])(cube([50,20,50])) # test the jack
+    #bot *= translate([0,0])(cube([43,42,50]))
     scad_render_to_file(cube(0)
-        + wall
-        #+ phantoms
-        #+ top
+        + top
+        + phantoms
         + bot
     , "out.scad")
 
