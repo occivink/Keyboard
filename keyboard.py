@@ -558,7 +558,6 @@ def main() -> int:
     wall_outer_width=1
     wall_inner_width=1
     wall_full_width=wall_outer_width + wall_inner_width
-    bottom_recess=0.1
 
     jack = JackSocket(
         pos = [sh.panel_right() - wall_full_width , 10],
@@ -603,7 +602,7 @@ def main() -> int:
     jack_hole = jack.make_hole()
     wall = wall_inner + wall_outer
 
-    bot_shape = offset(delta=-(wall_outer_width + bottom_recess))(shape)
+    bot_shape = offset(delta=-wall_outer_width)(shape)
     bot = linear_extrude(height=bot_height)(bot_shape)
     bot -= jack_hole
     for weight in weights:
