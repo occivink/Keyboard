@@ -550,7 +550,7 @@ def main() -> int:
     )
 
     controller = Controller(
-        pos = [sh.panel_right(),sh.panel_top()],
+        pos = [sh.panel_right() - wall_full_width,sh.panel_top()],
         height = height/3,
         total_height = height,
         pillar_diam = 4,
