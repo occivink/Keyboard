@@ -573,7 +573,12 @@ def main() -> int:
     )
 
     weights = []
-    for pos in [[22,21], [22, 57], [60,21], [60, 60], [98,10]]:
+    for pos in [
+        [22,21], [22, 57],
+        [60,21], [60, 60],
+        [98,10],
+        #[98,55], # maybe?
+    ]:
         weights.append(WeightedDisc(
             pos = pos,
             number = 1,
