@@ -1,5 +1,7 @@
 # Keyboard
 
+![Screenshot](https://user-images.githubusercontent.com/5473453/162803206-c2b92232-7113-4446-bfff-04380a89a90f.jpg)
+
 TODO: find a name
 
 Semi-modular, split, "ergonomic" keyboard design, designed for handwiring. Only CAD files for 3D-printing as of yet, firmware (intended for raspberry pico as of yet) will come later (maybe, if I actually go through with this).
@@ -16,3 +18,4 @@ Things that could be customized in theory:
 The customizability is not infinite so some things would have to be changed other than just a constant, but the code tries to limit such assumptions.
 
 TODO: illustrate this with screenshots
+
