@@ -519,6 +519,24 @@ class JackSocket:
         res = translate(self.pos)(translate([0,0,self.height])(res))
         return res
 
+class Support:
+    switch_nub_depth = 4.4
+    switch_nub_diameter = 2.5
+
+    def __init__(self, pos, height):
+        self.pos = pos
+        self.height = height
+
+    def make_shape(self):
+        return translate(self.pos)(
+            cylinder(
+                d=self.switch_nub_diameter,
+                h=self.height - self.switch_nub_depth,
+                segments=20
+            )
+        )
+
+
 def main() -> int:
     shell_offset = 1 # the 'border'
     keycap_size = [18,18]
@@ -594,6 +612,20 @@ def main() -> int:
             z_elevation = 1,
             top_height = 1))
 
+    supports = []
+    for coord in [
+        [1,0], [2,0],
+        [1,1], [2,1],
+        [0,2], [1,2], [2,2],
+        [0,3], [1,3], [2,3],
+        [0,4], [1,4], [2,4],
+        [0,5], [1,5], [2,4],
+    ]:
+        supports.append(Support(
+            pos = sh.get_key_position(row = coord[0], col = coord[1], center=True),
+            height = height,
+        ))
+
     shape = square(0)
     shape += tc.make_shape()
     shape += sh.make_shape()
@@ -614,6 +646,8 @@ def main() -> int:
         bot += weight.make_shape()
     for screw in screws:
         bot += screw.make_bot_shape()
+    for support in supports:
+        bot += support.make_shape()
     for weight in weights:
         bot -= weight.make_discs()
     for screw in screws:
