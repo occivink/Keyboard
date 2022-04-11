@@ -520,7 +520,7 @@ class JackSocket:
         return res
 
 class Support:
-    switch_nub_depth = 4.4
+    switch_nub_depth = 5.2 # for kailh choc
     switch_nub_diameter = 2.5
 
     def __init__(self, pos, height):
