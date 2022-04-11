@@ -677,14 +677,38 @@ def main() -> int:
     phantoms += jack.make_shape()
     phantoms = phantoms.set_modifier('%')
 
-    #top *= translate([113,25])(cube([50,100,50])) # test the controller
-    #top *= translate([116,0])(cube([50,20,50])) # test the jack
-    #bot *= translate([0,0])(cube([43,42,50]))
-    scad_render_to_file(cube(0)
+    #top *= translate([113,25])(cube([50,100,50])) # test controller
+    #top *= translate([116,0])(cube([50,20,50])) # test jack
+    #top *= translate([116,0])(cube([50,100,50])) # test jack+controller
+    #bot *= translate([0,0])(cube([43,42,50])) # test disc
+    #top *= translate([0,0])(cube([43,42,50])) # test disc
+
+    #shape = square([25,25])
+    #bot = linear_extrude(height=bot_height)(offset(delta=-wall_outer_width)(shape))
+    #bot += Support(pos = [25/2,25/2], height=height).make_shape()
+    #wall_inner = translate([0,0,bot_height])(linear_extrude(height=height - bot_height)(
+    #    offset(delta=-wall_outer_width)(shape) - offset(delta=-wall_full_width)(shape)
+    #))
+    #wall_outer = linear_extrude(height=height)(
+    #    shape - offset(delta=-wall_outer_width)(shape)
+    #)
+    #shape -= translate([25/2,25/2])(square([13.8,13.8], center=True))
+    #top = linear_extrude(height=top_height)(shape)
+    #top = translate([0,0,height-top_height])(top)
+    #top += wall_inner + wall_outer
+    #top = translate([0,0,10])(top)
+
+    out = (cube(0)
         + top
         + phantoms
         + bot
-    , "out.scad")
+    )
+
+    # add mirrored part
+    #out = out + translate([320,0,0])(scale([-1,1,1])(out))
+
+    scad_render_to_file(out, "out.scad")
+
 
     return 0
 
