@@ -32,15 +32,18 @@ def bezier_from_points(points):
     return bezier.Curve([xs, ys], degree=3)
 
 def sample_bezier_evenly(curve, precision):
-    res = []
+    coords = []
+    tangents = []
     x = 0.0
     while True:
         p = curve.evaluate(x)
-        res.append([p[0][0], p[1][0]])
+        coords.append([p[0][0], p[1][0]])
+        tangent = curve.evaluate_hodograph(x)
+        tangents.append([tangent[0][0], tangent[1][0]])
         if x == 1.0:
             break
         x = min(x + precision, 1.0)
-    return res
+    return coords, tangents
 
 def convert_bezier_points(points):
     res=[]
@@ -86,7 +89,8 @@ def bezier_closed_line(points, precision):
             res.append(p2)
         else:
             curve = bezier_from_points(subset)
-            res += sample_bezier_evenly(curve, precision)
+            sampled, _ = sample_bezier_evenly(curve, precision)
+            res += sampled
         offset += 3
     return res
 
@@ -125,7 +129,7 @@ class ThumbCluster:
         self.bezier_curve = bezier_from_points(points_converted)
         self.curve_target_length = (key_count - 1) * (self.keycap_size[0] + self.keycap_dist[0])
         self.curve_scale_factor = self.curve_target_length / self.bezier_curve.length
-        self.thumb_curve_points = sample_bezier_evenly(self.bezier_curve, precision)
+        self.thumb_curve_points, self.thumb_curve_tangents = sample_bezier_evenly(self.bezier_curve, precision)
         self.position = position
         self.offset = offset
 
@@ -143,9 +147,11 @@ class ThumbCluster:
         length = 0
         dist_between_keys_center = self.curve_target_length / (self.key_count - 1)
         for i in range(0,len(self.thumb_curve_points)-1):
-            t1 = self.thumb_curve_points[i]
-            t2 = self.thumb_curve_points[i+1]
-            seg_length = math.sqrt((t1[0] - t2[0]) ** 2 + (t1[1] - t2[1]) ** 2)
+            p1 = self.thumb_curve_points[i]
+            p2 = self.thumb_curve_points[i+1]
+            t1 = self.thumb_curve_tangents[i]
+            t2 = self.thumb_curve_tangents[i+1]
+            seg_length = math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
             t = None
             if i == 0:
                 t = 0
@@ -154,26 +160,17 @@ class ThumbCluster:
             elif length % dist_between_keys_center > (length + seg_length) % dist_between_keys_center:
                 t = 1 - ((length + seg_length) % dist_between_keys_center) / seg_length
             if t is not None:
-                m = [(1 - t) * t1[0] + t * t2[0], (1 - t) * t1[1] + t * t2[1]]
-                angle = math.atan2(t2[1] - t1[1], t2[0] - t1[0])
-                res.append([m, angle])
+                p = [(1 - t) * p1[0] + t * p2[0], (1 - t) * p1[1] + t * p2[1]]
+                t = [(1 - t) * t1[0] + t * t2[0], (1 - t) * t1[1] + t * t2[1]]
+                angle = math.atan2(t[1], t[0])
+                res.append([p, angle])
             length += seg_length
         return res
-
-    def get_line(self):
-        line = cube(0)
-        for i in range(0,len(self.thumb_curve_points)-1):
-            line += line2d.line2d(
-                self.thumb_curve_points[i],
-                self.thumb_curve_points[i+1],
-                width=1)
-        return line
 
     def get_key_coord(self, key_index, tangent_offset, perpendicular_offset):
         thumb_keys_pos = self.get_thumb_keys_pos()
         key = thumb_keys_pos[key_index]
         cap_angle = key[1]
-        cap_bottom_middle = key[1]
         # the line is defined along the bottom edge of the keycap, so we add an offset
         po = perpendicular_offset + self.keycap_size[1]/2
         return [sum_coords(
@@ -187,11 +184,8 @@ class ThumbCluster:
         obj = square([self.keycap_size[1] + 2 * self.offset, self.keycap_size[0] + 2 * self.offset], center=True)
         for i in range(0,len(self.thumb_curve_points)):
             pos = self.thumb_curve_points[i]
-            vec = \
-                diff_coords(self.thumb_curve_points[i+1], self.thumb_curve_points[i]) \
-                if i < len(self.thumb_curve_points) - 1 else \
-                diff_coords(self.thumb_curve_points[i], self.thumb_curve_points[i-1])
-            angle = math.atan2(vec[1], vec[0])
+            tangent = self.thumb_curve_tangents[i]
+            angle = math.atan2(tangent[1], tangent[0])
             angle += math.pi/2
             offset_perp = self.keycap_size[1]/2
             pos = sum_coords(pos, [math.cos(angle) * offset_perp, math.sin(angle) * offset_perp])
