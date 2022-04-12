@@ -33,7 +33,7 @@ def bezier_from_points(points):
 
 def sample_bezier_evenly(curve, precision):
     res = []
-    x = 0
+    x = 0.0
     while True:
         p = curve.evaluate(x)
         res.append([p[0][0], p[1][0]])
