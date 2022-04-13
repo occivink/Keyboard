@@ -1,4 +1,4 @@
-#!/bin/python
+#!/bin/python3
 
 from solid import *
 from solid.utils import *
@@ -536,6 +536,12 @@ def main() -> int:
     keycap_size = [18,18]
     keycap_dist = [1,1]
     switch_hole_size = [14,14]
+    height = 10 # total height, including bot and top plates
+    top_height = 2
+    bot_height = 2
+    wall_inner_width = 1 # the bottom plate is below the 'inner' wall
+    wall_outer_width = 1 # but not below the out wall, which encloses it
+    bottom_recess = 0.1
 
     tc = ThumbCluster(
         key_count = 4,
@@ -564,11 +570,6 @@ def main() -> int:
         precision = 0.08
     )
 
-    height=10
-    top_height=2
-    bot_height=2
-    wall_outer_width=1
-    wall_inner_width=1
     wall_full_width=wall_outer_width + wall_inner_width
 
     jack = JackSocket(
@@ -624,15 +625,7 @@ def main() -> int:
     shape += tc.make_shape()
     shape += sh.make_shape()
 
-    wall_inner = translate([0,0,bot_height])(linear_extrude(height=height - bot_height)(
-        offset(delta=-wall_outer_width)(shape) - offset(delta=-wall_full_width)(shape)
-    ))
-    wall_outer = linear_extrude(height=height)(
-        shape - offset(delta=-wall_outer_width)(shape)
-    )
     jack_hole = jack.make_hole()
-    wall = wall_inner + wall_outer
-
     bot_shape = offset(delta=-wall_outer_width)(shape)
     bot = linear_extrude(height=bot_height)(bot_shape)
     bot -= jack_hole
@@ -647,13 +640,15 @@ def main() -> int:
     for screw in screws:
         bot -= screw.make_bot_hole()
     bot += controller.make_bottom_support()
-    bot *= linear_extrude(height=height)(bot_shape)
+    bot *= linear_extrude(height=height)(bot_shape) # cut off protruding things (screws, for example
 
     switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
 
+    wall = linear_extrude(height=height)(shape - offset(delta=-wall_full_width)(shape))
+
     top = linear_extrude(height=top_height)(shape - switch_holes)
     top = translate([0,0,height-top_height])(top)
-    top += (wall - bot)
+    top += (wall - bot) # make sure that the wall does not overlap with the bottom
     top += controller.make_top_support()
     for screw in screws:
         top += screw.make_top_shape()
@@ -661,6 +656,10 @@ def main() -> int:
     top -= controller.make_usb_hole()
     for screw in screws:
         top -= screw.make_top_hole()
+
+    # slightly reduce the bottom footprint, so that it fits nicely into the walls
+    # we do this _after_ we removed the bottom shape from the wall
+    bot *= linear_extrude(height=height)(offset(delta=-bottom_recess)(bot_shape))
 
     keycaps = tc.make_keycaps() + sh.make_keycaps()
     phantoms = cube(0)
