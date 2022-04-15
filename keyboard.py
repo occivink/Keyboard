@@ -531,6 +531,37 @@ class Support:
             )
         )
 
+def make_top_and_bot(
+        shape_no_holes,
+        top_shape,
+        top_height,
+        top_things,
+        top_holes,
+        bot_shape,
+        bot_height,
+        bot_things,
+        bot_holes,
+        wall_full_width,
+        wall_outer_width,
+        bottom_recess,
+        height,
+    ):
+    bot_shape = offset(delta=-wall_outer_width)(bot_shape)
+    bot = linear_extrude(height=bot_height)(bot_shape)
+    bot += bot_things
+    bot -= bot_holes
+    bot *= linear_extrude(height=height)(bot_shape) # cut off protruding things (screws, for example
+
+    wall = linear_extrude(height=height)(shape_no_holes - offset(delta=-wall_full_width)(shape_no_holes))
+
+    top = linear_extrude(height=top_height)(top_shape)
+    top = translate([0,0,height-top_height])(top)
+    top += (wall - bot) # make sure that the wall does not overlap with the bottom
+    top += top_things
+    top -= top_holes
+    bot *= linear_extrude(height=height)(offset(delta=-bottom_recess)(bot_shape))
+
+    return top, bot
 
 def main() -> int:
     shell_offset = 1 # the 'border'
@@ -623,50 +654,57 @@ def main() -> int:
             height = height,
         ))
 
-    shape = square(0)
-    shape += tc.make_shape()
-    shape += sh.make_shape()
+    shape = tc.make_shape() + sh.make_shape()
 
-    jack_hole = jack.make_hole()
-    bot_shape = offset(delta=-wall_outer_width)(shape)
-    bot = linear_extrude(height=bot_height)(bot_shape)
-    bot -= jack_hole
-    for weight in weights:
-        bot += weight.make_shape()
+    top_things = cube(0)
+    top_things += controller.make_top_support()
     for screw in screws:
-        bot += screw.make_bot_shape()
+        top_things += screw.make_top_shape()
+
+    top_holes = cube(0)
+    top_holes += jack.make_hole()
+    top_holes += controller.make_usb_hole()
+    for screw in screws:
+        top_holes += screw.make_top_hole()
+
+    bot_things = cube(0)
+    for weight in weights:
+        bot_things += weight.make_shape()
+    for screw in screws:
+        bot_things += screw.make_bot_shape()
     for support in supports:
-        bot += support.make_shape()
+        bot_things += support.make_shape()
+    bot_things += controller.make_bottom_support()
+
+    bot_holes = cube(0)
+    bot_holes += jack.make_hole()
     for weight in weights:
-        bot -= weight.make_discs()
+        bot_holes += weight.make_discs()
     for screw in screws:
-        bot -= screw.make_bot_hole()
-    bot += controller.make_bottom_support()
-    bot *= linear_extrude(height=height)(bot_shape) # cut off protruding things (screws, for example
+        bot_holes += screw.make_bot_hole()
 
-    switch_holes = tc.make_switch_holes() + sh.make_switch_holes()
-
-    wall = linear_extrude(height=height)(shape - offset(delta=-wall_full_width)(shape))
-
-    top = linear_extrude(height=top_height)(shape - switch_holes)
-    top = translate([0,0,height-top_height])(top)
-    top += (wall - bot) # make sure that the wall does not overlap with the bottom
-    top += controller.make_top_support()
-    for screw in screws:
-        top += screw.make_top_shape()
-    top -= jack_hole
-    top -= controller.make_usb_hole()
-    for screw in screws:
-        top -= screw.make_top_hole()
-
-    # slightly reduce the bottom footprint, so that it fits nicely into the walls
-    # we do this _after_ we removed the bottom shape from the wall
-    bot *= linear_extrude(height=height)(offset(delta=-bottom_recess)(bot_shape))
+    top, bot = make_top_and_bot(
+        shape_no_holes = shape,
+        top_shape = shape - (tc.make_switch_holes() + sh.make_switch_holes()),
+        top_things = top_things,
+        top_holes = top_holes,
+        bot_shape = shape,
+        bot_things = bot_things,
+        bot_holes = bot_holes,
+        wall_full_width = wall_full_width,
+        wall_outer_width = wall_outer_width,
+        top_height = top_height,
+        bot_height = bot_height,
+        bottom_recess = bottom_recess,
+        height = height,
+    )
 
     keycaps = tc.make_keycaps() + sh.make_keycaps()
     phantoms = cube(0)
-    phantoms += translate([0,0,4])(linear_extrude(height=2)(keycaps))
-    phantoms += linear_extrude(height=4)(switch_holes)
+    phantoms += translate([0,0,4])(linear_extrude(height=2)(
+        tc.make_keycaps() + sh.make_keycaps()))
+    phantoms += linear_extrude(height=4)(
+        tc.make_switch_holes() + sh.make_switch_holes())
     phantoms = translate([0,0,height-top_height])(phantoms)
     phantoms += controller.make_shape()
     phantoms += jack.make_shape()
@@ -678,24 +716,31 @@ def main() -> int:
     #bot *= translate([0,0])(cube([43,42,50])) # test disc
     #top *= translate([0,0])(cube([43,42,50])) # test disc
 
-    #shape = square([25,25])
-    #bot = linear_extrude(height=bot_height)(offset(delta=-wall_outer_width)(shape))
-    #bot += Support(pos = [25/2,25/2], height=height).make_shape()
-    #wall_inner = translate([0,0,bot_height])(linear_extrude(height=height - bot_height)(
-    #    offset(delta=-wall_outer_width)(shape) - offset(delta=-wall_full_width)(shape)
-    #))
-    #wall_outer = linear_extrude(height=height)(
-    #    shape - offset(delta=-wall_outer_width)(shape)
+    plate = square([20,20]);
+    screw = Screw(
+            xy_pos = [10,10],
+            pillar_diam = 7,
+            z_elevation = 1,
+            top_height = 1)
+    #top, bot = make_top_and_bot(
+    #    shape_no_holes = plate,
+    #    top_shape = plate,
+    #    top_things = screw.make_top_shape(),
+    #    top_holes = screw.make_top_hole() + right(18)(cube([20,20,20])),
+    #    bot_shape = plate,
+    #    bot_things = screw.make_bot_shape(),
+    #    bot_holes = screw.make_bot_hole() + right(18)(cube([20,20,20])),
+    #    wall_full_width = wall_full_width,
+    #    wall_outer_width = wall_outer_width,
+    #    top_height = top_height,
+    #    bot_height = bot_height,
+    #    bottom_recess = 0.04,
+    #    height = height,
     #)
-    #shape -= translate([25/2,25/2])(square([13.8,13.8], center=True))
-    #top = linear_extrude(height=top_height)(shape)
-    #top = translate([0,0,height-top_height])(top)
-    #top += wall_inner + wall_outer
-    #top = translate([0,0,10])(top)
 
     out = (cube(0)
-        + top
-        + phantoms
+        + up(10)(top)
+        #+ phantoms
         + bot
     )
 
