@@ -417,13 +417,13 @@ class Controller:
         return self.move_into_place(res)
 
 class Screw:
-    thread_diameter = 2
+    thread_diameter = 2.2
     thread_height = 6
     head_height = 2
-    head_diameter = 3.9
+    head_diameter = 4
 
     nut_height = 1.2
-    nut_flat_width = 4.1
+    nut_flat_width = 4.2
 
     extra_support_height_bot = 1
 
@@ -451,8 +451,9 @@ class Screw:
         return translate(self.xy_pos)(cyl)
 
     def make_top_shape(self):
-        cyl = cylinder(d = self.pillar_diam, h = self.thread_height - self.extra_support_height_bot, segments=20)
-        cyl = translate([0,0,self.head_height + self.extra_support_height_bot + self.z_elevation])(cyl)
+        extra = 0.2 #
+        cyl = cylinder(d = self.pillar_diam, h = self.thread_height - self.extra_support_height_bot - extra, segments=20)
+        cyl = translate([0,0,self.head_height + self.extra_support_height_bot + self.z_elevation + extra])(cyl)
         return translate(self.xy_pos)(cyl)
 
     def make_bot_shape(self):
