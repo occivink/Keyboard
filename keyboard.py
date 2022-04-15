@@ -536,13 +536,14 @@ def main() -> int:
     shell_offset = 1 # the 'border'
     keycap_size = [18,18]
     keycap_dist = [1,1]
-    switch_hole_size = [14,14]
+    switch_hole_size = [13.7,13.7]
     height = 10 # total height, including bot and top plates
     top_height = 2
     bot_height = 2
     wall_inner_width = 1 # the bottom plate is below the 'inner' wall
     wall_outer_width = 1 # but not below the out wall, which encloses it
-    bottom_recess = 0.1
+    bottom_recess = 0.03 # shrink the bottom plate by this much all around, so that fit is
+                         # not as tight
 
     tc = ThumbCluster(
         key_count = 4,
