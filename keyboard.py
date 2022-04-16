@@ -430,11 +430,10 @@ class Screw:
     nut_diameter = 2.3094 * nut_flat_width / 2
     nut_holder_diameter =  1.2 * nut_diameter
 
-    def __init__(self, xy_pos, pillar_diam, z_elevation, top_height):
+    def __init__(self, xy_pos, pillar_diam, z_elevation):
         self.xy_pos = xy_pos
         self.pillar_diam = pillar_diam
         self.z_elevation = z_elevation
-        self.top_height = top_height
 
     def make_top_hole(self):
         nut_z_pos = self.z_elevation + self.head_height + self.thread_height - self.nut_height
@@ -462,9 +461,9 @@ class Screw:
         return translate(self.xy_pos)(cyl)
 
 class JackSocket:
-    outer_cyl_diam = 7
+    outer_cyl_diam = 7.1
     outer_cyl_height = 5
-    inner_cyl_1_diam = 9
+    inner_cyl_1_diam = 9.1
     inner_cyl_1_height = 1.8
     inner_cyl_2_diam = 8
     inner_cyl_2_height = 10
@@ -637,8 +636,7 @@ def main() -> int:
         screws.append(Screw(
             xy_pos = pos,
             pillar_diam = 7,
-            z_elevation = 1,
-            top_height = 1))
+            z_elevation = 1))
 
     supports = []
     for coord in [
