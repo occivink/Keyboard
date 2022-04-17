@@ -8,6 +8,7 @@ import bezier
 import triangle as tr
 
 eps = 0.001
+layer_height = 0.2
 
 def bezier_visualize(points, diameter, width):
     res = cube(0)
@@ -404,7 +405,7 @@ class Controller:
         res = cube(0)
         for x in [self.holes_dist_to_side_edge, self.board_width - self.holes_dist_to_side_edge]:
             for y in [self.holes_dist_to_top_edge, self.board_length - self.holes_dist_to_top_edge]:
-                res += translate([x,y])(cylinder(d=self.pillar_diam, h=self.height,segments=20))
+                res += translate([x,y])(cylinder(d=self.pillar_diam, h=self.height - layer_height, segments=20))
         return self.move_into_place(res, with_height = False)
 
     def make_top_support(self):
@@ -450,9 +451,8 @@ class Screw:
         return translate(self.xy_pos)(cyl)
 
     def make_top_shape(self):
-        extra = 0.2 #
-        cyl = cylinder(d = self.pillar_diam, h = self.thread_height - self.extra_support_height_bot - extra, segments=20)
-        cyl = translate([0,0,self.head_height + self.extra_support_height_bot + self.z_elevation + extra])(cyl)
+        cyl = cylinder(d = self.pillar_diam, h = self.thread_height - self.extra_support_height_bot - layer_height, segments=20)
+        cyl = translate([0,0,self.head_height + self.extra_support_height_bot + self.z_elevation + layer_height])(cyl)
         return translate(self.xy_pos)(cyl)
 
     def make_bot_shape(self):
@@ -714,12 +714,12 @@ def main() -> int:
     #bot *= translate([0,0])(cube([43,42,50])) # test disc
     #top *= translate([0,0])(cube([43,42,50])) # test disc
 
-    plate = square([20,20]);
-    screw = Screw(
-            xy_pos = [10,10],
-            pillar_diam = 7,
-            z_elevation = 1,
-            top_height = 1)
+    #plate = square([20,20]);
+    #screw = Screw(
+    #        xy_pos = [10,10],
+    #        pillar_diam = 7,
+    #        z_elevation = 1,
+    #        top_height = 1)
     #top, bot = make_top_and_bot(
     #    shape_no_holes = plate,
     #    top_shape = plate,
