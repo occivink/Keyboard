@@ -577,6 +577,7 @@ def main() -> int:
     bottom_recess = 0.03 # shrink the bottom plate by this much all around, so that the fit is
                          # not as tight
     roundness = 1
+    precision = 0.1
 
     tc = ThumbCluster(
         key_count = 4,
@@ -591,7 +592,7 @@ def main() -> int:
         switch_hole_size = switch_hole_size,
         position = [77, -14],
         offset = shell_offset,
-        precision = 0.08
+        precision = precision,
     )
 
     sh = Shell(rows = 4,
@@ -602,7 +603,7 @@ def main() -> int:
         thumb_cluster = tc,
         column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
         shell_offset = shell_offset,
-        precision = 0.08
+        precision = precision,
     )
 
     wall_full_width=wall_outer_width + wall_inner_width
