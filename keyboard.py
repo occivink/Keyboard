@@ -566,8 +566,9 @@ def main() -> int:
     bot_height = 2
     wall_inner_width = 1 # the bottom plate is below the 'inner' wall
     wall_outer_width = 1 # but not below the out wall, which encloses it
-    bottom_recess = 0.03 # shrink the bottom plate by this much all around, so that fit is
+    bottom_recess = 0.03 # shrink the bottom plate by this much all around, so that the fit is
                          # not as tight
+    roundness = 1
 
     tc = ThumbCluster(
         key_count = 4,
@@ -647,6 +648,8 @@ def main() -> int:
         ))
 
     shape = tc.make_shape() + sh.make_shape()
+    if roundness > 0:
+        shape = offset(r=roundness,segments=20)(offset(r=-roundness,segments=20)(shape))
 
     top_things = cube(0)
     top_things += controller.make_top_support()
