@@ -368,9 +368,9 @@ class Controller:
     board_edge_to_cable_shell = 2.5 # distance between board edge to cable shell
     usb_bottom_from_board_bottom = 0.5 # distance from board bottom to usb socket bottom
 
-    def __init__(self, pos, height, total_height, pillar_diam):
+    def __init__(self, pos, usb_top_height, total_height, pillar_diam):
         self.pos = pos
-        self.height = height
+        self.board_z_pos = usb_top_height - (self.usb_bottom_from_board_bottom + self.usb_height)
         self.total_height = total_height
         self.pillar_diam = pillar_diam
 
@@ -399,13 +399,13 @@ class Controller:
 
     def move_into_place(self, obj, with_height = True):
         obj = translate([-self.board_width,-self.board_length - self.board_edge_to_cable_shell])(obj)
-        return translate(self.pos)(translate([0,0,self.height if with_height else 0])(obj))
+        return translate(self.pos)(translate([0,0,self.board_z_pos if with_height else 0])(obj))
 
     def make_bottom_support(self):
         res = cube(0)
         for x in [self.holes_dist_to_side_edge, self.board_width - self.holes_dist_to_side_edge]:
             for y in [self.holes_dist_to_top_edge, self.board_length - self.holes_dist_to_top_edge]:
-                res += translate([x,y])(cylinder(d=self.pillar_diam, h=self.height - layer_height, segments=20))
+                res += translate([x,y])(cylinder(d=self.pillar_diam, h=self.board_z_pos - layer_height, segments=20))
         return self.move_into_place(res, with_height = False)
 
     def make_top_support(self):
@@ -414,7 +414,7 @@ class Controller:
             for y in [self.holes_dist_to_top_edge, self.board_length - self.holes_dist_to_top_edge]:
                 res += translate([x,y])(cylinder(d=self.holes_diam, h=self.board_height, segments=20))
                 res += translate([x,y,self.board_height])(
-                    cylinder(d=self.pillar_diam, h=self.total_height - self.height - self.board_height, segments=20))
+                    cylinder(d=self.pillar_diam, h=self.total_height - self.board_height - self.board_z_pos, segments=20))
         return self.move_into_place(res)
 
 class Screw:
@@ -612,7 +612,7 @@ def main() -> int:
 
     controller = Controller(
         pos = [sh.panel_right() - wall_full_width,sh.panel_top()],
-        height = height/3,
+        usb_top_height = height - top_height - 0.4,
         total_height = height,
         pillar_diam = 4,
     )
@@ -708,12 +708,6 @@ def main() -> int:
     phantoms += jack.make_shape()
     phantoms = phantoms.set_modifier('%')
 
-    #top *= translate([113,25])(cube([50,100,50])) # test controller
-    #top *= translate([116,0])(cube([50,20,50])) # test jack
-    #top *= translate([116,0])(cube([50,100,50])) # test jack+controller
-    #bot *= translate([0,0])(cube([43,42,50])) # test disc
-    #top *= translate([0,0])(cube([43,42,50])) # test disc
-
     #plate = square([20,20]);
     #screw = Screw(
     #        xy_pos = [10,10],
@@ -735,10 +729,27 @@ def main() -> int:
     #    bottom_recess = 0.04,
     #    height = height,
     #)
+    #plate = square([30,60])
+    #controller = Controller(pos = [25,60], usb_top_height = height - top_height - .4, total_height=height, pillar_diam=4)
+    #top, bot = make_top_and_bot(
+    #   shape_no_holes = plate,
+    #   top_shape = plate,
+    #   top_things = controller.make_top_support(),
+    #   top_holes = controller.make_usb_hole() + right(28)(cube([100,100,100])),
+    #   bot_shape = plate,
+    #   bot_things = controller.make_bottom_support(),
+    #   bot_holes = right(28)(cube([100,100,100])),
+    #   wall_full_width = wall_full_width,
+    #   wall_outer_width = wall_outer_width,
+    #   top_height = top_height,
+    #   bot_height = bot_height,
+    #   bottom_recess = bottom_recess,
+    #   height = height,
+    #)
 
     out = (cube(0)
         + up(10)(top)
-        #+ phantoms
+        + phantoms
         + bot
     )
 
