@@ -5,7 +5,6 @@ from solid.utils import *
 import sys
 import math
 import bezier
-import triangle as tr
 
 eps = 0.001
 layer_height = 0.2
@@ -93,6 +92,7 @@ def bezier_closed_line(points, precision):
             sampled, _ = sample_bezier_evenly(curve, precision)
             res += sampled
         offset += 3
+    res.pop()
     return res
 
 def sum_coords(*args):
@@ -299,13 +299,7 @@ class Shell:
         )
 
     def make_shape(self):
-        bez = self.bezier_curve
-        segments=[[i, (i+1)%len(bez)] for i in range(0,len(bez))]
-        tris = tr.triangulate({'vertices':bez, 'segments': segments}, 'p')
-        shape = square(0)
-        for tri in tris['triangles'].tolist():
-            shape += polygon([bez[tri[0]], bez[tri[1]], bez[tri[2]]])
-        return shape
+        return polygon(self.bezier_curve, convexity=4)
 
     def make_switch_holes(self):
         res = square(0)
@@ -749,7 +743,7 @@ def main() -> int:
 
     out = (cube(0)
         + up(10)(top)
-        + phantoms
+        + up(10)(phantoms)
         + bot
     )
 
