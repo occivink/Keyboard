@@ -73,12 +73,10 @@ def convert_bezier_points(points):
                 res.append(handle)
     return res, trivial
 
-def bezier_closed_line(points, precision):
-    if len(points) < 6 or len(points) % 3 != 0:
-        raise ValueError
+def bezier_lines(points, precision):
     res = []
     offset = 0
-    while offset < len(points):
+    while offset + 2 < len(points):
         p1 = points[offset]
         h1 = points[offset+1]
         h2 = points[offset+2]
@@ -92,7 +90,6 @@ def bezier_closed_line(points, precision):
             sampled, _ = sample_bezier_evenly(curve, precision)
             res += sampled
         offset += 3
-    res.pop()
     return res
 
 def sum_coords(*args):
@@ -194,6 +191,19 @@ class ThumbCluster:
             shape += translate(pos)(rot)
         return shape
 
+    def get_shape_points(self):
+        res = []
+        for i in range(0,len(self.thumb_curve_points)):
+            pos = self.thumb_curve_points[i]
+            tangent = self.thumb_curve_tangents[i]
+            angle = math.atan2(tangent[1], tangent[0])
+            angle += math.pi/2
+            offset_perp = -self.offset
+            pos = sum_coords(pos, [math.cos(angle) * offset_perp, math.sin(angle) * offset_perp])
+            res.append(pos)
+        res.reverse()
+        return res
+
 
     def make_switch_holes(self):
         shape = square(0)
@@ -239,6 +249,12 @@ class Shell:
         self.precision = precision
 
         casepoints = [ # goes clockwise, starting from bottom left
+            self.thumb_cluster.get_bottom_left(),
+                ["RELATIVE", 0, 15],
+                ["RELATIVE", 5, 0],
+            sum_coords(self.get_key_position(0,0), [2*self.keycap_size[1], -shell_offset]),
+                ["SHARP"],
+                ["SHARP"],
             sum_coords(self.get_key_position(0,0), [-self.shell_offset, -self.shell_offset]), # BOTTOM LEFT
                 ["SHARP"],
                 ["SHARP"],
@@ -264,17 +280,9 @@ class Shell:
                 ["SHARP"],
                 ["SHARP"],
             self.thumb_cluster.get_bottom_right(),
-                ["RELATIVE", 0, 40], # random control points
-                ["RELATIVE", 40, 0], # random control points
-            self.thumb_cluster.get_bottom_left(),
-                ["RELATIVE", 0, 15],
-                ["RELATIVE", 5, 0],
-            sum_coords(self.get_key_position(0,0), [2*self.keycap_size[1], -shell_offset]),
-                ["SHARP"],
-                ["SHARP"],
         ]
 
-        self.bezier_curve = bezier_closed_line(casepoints, self.precision)
+        self.bezier_curve = bezier_lines(casepoints, self.precision)
 
 
     def panel_top(self):
@@ -298,8 +306,8 @@ class Shell:
             ]
         )
 
-    def make_shape(self):
-        return polygon(self.bezier_curve, convexity=4)
+    def get_shape_points(self):
+        return self.bezier_curve
 
     def make_switch_holes(self):
         res = square(0)
@@ -647,7 +655,7 @@ def main() -> int:
             height = height,
         ))
 
-    shape = tc.make_shape() + sh.make_shape()
+    shape = polygon(points = sh.get_shape_points() + tc.get_shape_points(), convexity=4)
     if roundness > 0:
         shape = offset(r=roundness,segments=20)(offset(r=-roundness,segments=20)(shape))
 
@@ -747,7 +755,7 @@ def main() -> int:
     out = (cube(0)
         + up(10)(top)
         + up(10)(phantoms)
-        + bot
+        #+ bot
     )
 
     # add mirrored part
