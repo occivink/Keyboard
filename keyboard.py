@@ -114,18 +114,16 @@ class ThumbCluster:
             position,
             offset,
             keycap_size,
-            keycap_dist,
+            keycap_spacing,
             switch_hole_size,
             precision):
         self.key_count = key_count
         self.keycap_size = keycap_size
-        self.keycap_dist = keycap_dist
+        self.keycap_spacing = keycap_spacing
         self.switch_hole_size = switch_hole_size
-        self.switch_hole_dist = diff_coords(
-            sum_coords(self.keycap_size, self.keycap_dist), self.switch_hole_size)
         points_converted, _ = convert_bezier_points(bezier_points)
         self.bezier_curve = bezier_from_points(points_converted)
-        self.curve_target_length = (key_count - 1) * (self.keycap_size[0] + self.keycap_dist[0])
+        self.curve_target_length = (key_count - 1) * (self.keycap_size[0] + self.keycap_spacing)
         self.curve_scale_factor = self.curve_target_length / self.bezier_curve.length
         self.thumb_curve_points, self.thumb_curve_tangents = sample_bezier_evenly(self.bezier_curve, precision)
         self.position = position
@@ -580,6 +578,7 @@ def main() -> int:
     keycap_size = [18,17]
     keycap_dist = [1,1]
     switch_hole_size = [13.7,13.7]
+    thumb_keycap_spacing = 1
     height = 10 # total height, including bot and top plates
     top_height = 2
     bot_height = 2
@@ -599,7 +598,7 @@ def main() -> int:
             [7,-4]
         ],
         keycap_size = keycap_size,
-        keycap_dist = keycap_dist,
+        keycap_spacing = thumb_keycap_spacing,
         switch_hole_size = switch_hole_size,
         position = [77, -14],
         offset = shell_offset,
@@ -772,7 +771,7 @@ def main() -> int:
     out = (cube(0)
         + up(10)(top)
         + up(10)(phantoms)
-        #+ bot
+        + bot
     )
 
     # add mirrored part
