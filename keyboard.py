@@ -327,8 +327,8 @@ class Shell:
 
 class WeightedDisc:
     disc_height=1.6
-    disc_diam=35.4
-    disc_hole_diam=9
+    disc_diam=35.3
+    disc_hole_diam=8.4
 
     def __init__(self, pos, number, extra_diam, disc_dist_from_bot, disc_dist_to_top):
         self.pos = pos
@@ -338,8 +338,8 @@ class WeightedDisc:
         self.disc_dist_to_top = disc_dist_to_top
 
     def make_discs(self):
-        discs = cylinder(d=self.disc_diam, h=self.number_discs * self.disc_height, segments=40)
-        discs -= cylinder(d=self.disc_hole_diam, h=self.number_discs * self.disc_height, segments=40)
+        discs = cylinder(d=self.disc_diam, h=self.number_discs * self.disc_height, segments=60)
+        discs -= cylinder(d=self.disc_hole_diam, h=self.number_discs * self.disc_height, segments=60)
         return translate([0,0,self.disc_dist_from_bot])(translate(self.pos)(discs))
 
     def get_diameter(self):
@@ -347,7 +347,7 @@ class WeightedDisc:
 
     def make_shape(self):
         return translate(self.pos)(cylinder(d = self.disc_diam + self.extra_diam,
-            h = self.number_discs * self.disc_height + self.disc_dist_from_bot + self.disc_dist_to_top, segments=40))
+            h = self.number_discs * self.disc_height + self.disc_dist_from_bot + self.disc_dist_to_top, segments=60))
 
 class Controller:
     board_width = 21
@@ -463,9 +463,9 @@ class Screw:
         return translate(self.xy_pos)(cyl)
 
 class JackSocket:
-    outer_cyl_diam = 7.1
+    outer_cyl_diam = 7.2
     outer_cyl_height = 5
-    inner_cyl_1_diam = 9.1
+    inner_cyl_1_diam = 9.2
     inner_cyl_1_height = 1.8
     inner_cyl_2_diam = 8
     inner_cyl_2_height = 10
@@ -485,31 +485,42 @@ class JackSocket:
             rotate([0,0,90])(cylinder(d=self.hex_nut_diam, h=self.hex_nut_height, segments=6))
         )
         res += translate([0,0,-self.outer_cyl_height])(
-            cylinder(d=self.outer_cyl_diam, h=self.outer_cyl_height, segments=20)
+            cylinder(d=self.outer_cyl_diam, h=self.outer_cyl_height, segments=30)
         )
         res += translate([0,0,0])(
-            cylinder(d=self.inner_cyl_1_diam, h=self.inner_cyl_1_height, segments=20)
+            cylinder(d=self.inner_cyl_1_diam, h=self.inner_cyl_1_height, segments=30)
         )
         res += translate([0,0,self.inner_cyl_1_height])(
-            cylinder(d=self.inner_cyl_2_diam, h=self.inner_cyl_2_height, segments=20)
+            cylinder(d=self.inner_cyl_2_diam, h=self.inner_cyl_2_height, segments=30)
         )
         res = rotate([0,-90,0])(res)
         res = translate(self.pos)(translate([0,0,self.height])(res))
         return res
 
-    def make_hole(self):
+    def make_bot_hole(self):
+        res = translate([0,0,-self.outer_cyl_height])(
+            cylinder(
+                d=max(self.inner_cyl_1_diam, self.inner_cyl_2_diam),
+                h=self.inner_cyl_1_height + self.inner_cyl_2_height + self.outer_cyl_height + 1,
+                segments=40)
+        )
+        res = rotate([0,-90,0])(res)
+        res = translate(self.pos)(translate([0,0,self.height])(res))
+        return res
+
+    def make_top_hole(self):
         res = cube(0)
         #res += translate([0,0,-self.nut_offset-self.hex_nut_height])(
         #    rotate([0,0,90])(cylinder(d=self.hex_nut_diam, h=self.hex_nut_height, segments=6))
         #)
         res += translate([0,0,-self.outer_cyl_height])(
-            cylinder(d=self.outer_cyl_diam, h=self.outer_cyl_height, segments=20)
+            cylinder(d=self.outer_cyl_diam, h=self.outer_cyl_height, segments=40)
         )
         res += translate([0,0,0])(
             cylinder(
                 d=max(self.inner_cyl_1_diam, self.inner_cyl_2_diam),
                 h=self.inner_cyl_1_height + self.inner_cyl_2_height + 1,
-                segments=20)
+                segments=40)
         )
         res = rotate([0,-90,0])(res)
         res = translate(self.pos)(translate([0,0,self.height])(res))
@@ -666,7 +677,7 @@ def main() -> int:
         top_things += screw.make_top_shape()
 
     top_holes = cube(0)
-    top_holes += jack.make_hole()
+    top_holes += jack.make_top_hole()
     top_holes += controller.make_usb_hole()
     for screw in screws:
         top_holes += screw.make_top_hole()
@@ -681,7 +692,7 @@ def main() -> int:
     bot_things += controller.make_bottom_support()
 
     bot_holes = cube(0)
-    bot_holes += jack.make_hole()
+    bot_holes += jack.make_bot_hole()
     for weight in weights:
         bot_holes += weight.make_discs()
     for screw in screws:
