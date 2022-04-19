@@ -577,7 +577,7 @@ def make_top_and_bot(
 
 def main() -> int:
     shell_offset = 1 # the 'border'
-    keycap_size = [18,18]
+    keycap_size = [18,17]
     keycap_dist = [1,1]
     switch_hole_size = [13.7,13.7]
     height = 10 # total height, including bot and top plates
@@ -585,10 +585,10 @@ def main() -> int:
     bot_height = 2
     wall_inner_width = 1 # the bottom plate is below the 'inner' wall
     wall_outer_width = 1 # but not below the out wall, which encloses it
-    bottom_recess = 0.03 # shrink the bottom plate by this much all around, so that the fit is
+    bottom_recess = 0.00 # shrink the bottom plate by this much all around, so that the fit is
                          # not as tight
     roundness = 1
-    precision = 0.1
+    precision = 0.01
 
     tc = ThumbCluster(
         key_count = 4,
@@ -634,7 +634,7 @@ def main() -> int:
 
     weights = []
     for pos in [
-        [22,21], [22, 57],
+        [22,20], [22, 56],
         [60,21], [60, 60],
         [98,10],
         #[98,55], # maybe?
@@ -647,7 +647,12 @@ def main() -> int:
             disc_dist_to_top = 0.4))
 
     screws = []
-    for pos in [[40,4], [35,78], [77.8,82.2], [132,-4]]:
+    for pos in [
+        [40,4],      # bot left
+        [35,74],     # top left
+        [77.8,78.2], # top right
+        [132,-4]     # bot right
+    ]:
         screws.append(Screw(
             xy_pos = pos,
             pillar_diam = 7,
