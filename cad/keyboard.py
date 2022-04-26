@@ -163,7 +163,7 @@ class ThumbCluster:
             length += seg_length
         return res
 
-    def get_key_coord(self, key_index, tangent_offset, perpendicular_offset):
+    def get_key_coord(self, key_index, tangent_offset = 0, perpendicular_offset = 0):
         thumb_keys_pos = self.get_thumb_keys_pos()
         key = thumb_keys_pos[key_index]
         cap_angle = key[1]
@@ -586,11 +586,14 @@ def main() -> int:
     wall_outer_width = 1 # but not below the out wall, which encloses it
     bottom_recess = 0.00 # shrink the bottom plate by this much all around, so that the fit is
                          # not as tight
+    rows = 4
+    columns = 6
+    thumb_cluster_key_count = 4
     roundness = 1
     precision = 0.01
 
     tc = ThumbCluster(
-        key_count = 4,
+        key_count = thumb_cluster_key_count,
         bezier_points = [
             [0,0],
                 ["POLAR", 3, -5],
@@ -605,8 +608,8 @@ def main() -> int:
         precision = precision,
     )
 
-    sh = Shell(rows = 4,
-        columns = 6,
+    sh = Shell(rows = rows,
+        columns = columns,
         keycap_size = keycap_size,
         keycap_dist = keycap_dist,
         switch_hole_size = switch_hole_size,
@@ -658,18 +661,15 @@ def main() -> int:
             z_elevation = 1))
 
     supports = []
-    for coord in [
-        [1,0], [2,0],
-        [1,1], [2,1],
-        [0,2], [1,2], [2,2],
-        [0,3], [1,3], [2,3],
-        [0,4], [1,4], [2,4],
-        [0,5], [1,5], [2,4],
-    ]:
-        supports.append(Support(
-            pos = sh.get_key_position(row = coord[0], col = coord[1], center=True),
-            height = height,
-        ))
+    for row in range(rows):
+        for col in range(columns):
+            supports.append(Support(
+                pos = sh.get_key_position(row = row, col = col, center=True),
+                height = height,
+            ))
+    for c in range(thumb_cluster_key_count):
+        pos = tc.get_key_coord(c)[0]
+        supports.append(Support(pos = pos, height = height))
 
     shape = polygon(points = sh.get_shape_points() + tc.get_shape_points(), convexity=4)
     if roundness > 0:
