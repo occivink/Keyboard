@@ -626,7 +626,7 @@ def main() -> int:
 
     controller = Controller(
         pos = [sh.panel_right() - wall_full_width,sh.panel_top()],
-        usb_top_height = height - top_height - 0.4,
+        usb_top_height = height - top_height,
         total_height = height,
         pillar_diam = 4,
     )
