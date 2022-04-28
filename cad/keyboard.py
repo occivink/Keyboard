@@ -356,6 +356,7 @@ class Controller:
     holes_dist_to_side_edge = 4.8
     holes_dist_to_top_edge = 2
 
+    pin_hole_diam = 0.5
     button_dist_to_left = 7
     button_dist_to_top = 12.5
 
@@ -389,13 +390,20 @@ class Controller:
 
         return self.move_into_place(board + usb)
 
-    def make_usb_hole(self):
+    def make_top_hole(self):
         usb = cube([self.usb_width, self.usb_length * 2, self.usb_height])
         usb = translate([self.board_width/2-self.usb_width/2, 0])(usb)
         usb = translate([0, self.board_length - self.usb_length + self.usb_protursion])(usb)
         usb = translate([0,0,self.usb_bottom_from_board_bottom])(usb)
 
-        return self.move_into_place(usb)
+        pin_hole = cylinder(d=self.pin_hole_diam, h=self.total_height - self.board_height - self.board_z_pos, segments = 10)
+        pin_hole = translate([
+                self.button_dist_to_left,
+                self.board_length - self.button_dist_to_top,
+                self.board_height
+            ])(pin_hole)
+
+        return self.move_into_place(usb + pin_hole)
 
     def move_into_place(self, obj, with_height = True):
         obj = translate([-self.board_width,-self.board_length - self.board_edge_to_cable_shell])(obj)
@@ -682,7 +690,7 @@ def main() -> int:
 
     top_holes = cube(0)
     top_holes += jack.make_top_hole()
-    top_holes += controller.make_usb_hole()
+    top_holes += controller.make_top_hole()
     for screw in screws:
         top_holes += screw.make_top_hole()
 
@@ -756,7 +764,7 @@ def main() -> int:
     #   shape_no_holes = plate,
     #   top_shape = plate,
     #   top_things = controller.make_top_support(),
-    #   top_holes = controller.make_usb_hole() + right(28)(cube([100,100,100])),
+    #   top_holes = controller.make_top_hole() + right(28)(cube([100,100,100])),
     #   bot_shape = plate,
     #   bot_things = controller.make_bottom_support(),
     #   bot_holes = right(28)(cube([100,100,100])),
