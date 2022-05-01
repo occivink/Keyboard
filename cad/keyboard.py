@@ -356,9 +356,9 @@ class Controller:
     holes_dist_to_side_edge = 4.8
     holes_dist_to_top_edge = 2
 
-    pin_hole_diam = 0.5
+    pin_hole_diam = 1
     button_dist_to_left = 7
-    button_dist_to_top = 12.5
+    button_dist_to_top = 12
 
     usb_height = 3.2
     usb_width = 8.5
