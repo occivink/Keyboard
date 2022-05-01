@@ -80,13 +80,26 @@ typedef struct TU_ATTR_PACKED {
   uint8_t keycode[13]; /**< Key codes of the currently pressed keys. */
 } keyboard_report_t;
 
-bool usb_mounted = false;
-
 keyboard_report_t report;
-keyboard_report_t old_report;
 
 uint gpio_rows[] = {2,6,12,14,15};
-uint gpio_cols[] = {0,3,9,7,13,11};
+uint gpio_cols[] = {0,4,9,7,13,11};
+
+bool set_bit(bool newVal, uint index, uint8_t* ptr, uint len)
+{
+    uint elem = index / 8;
+    if (elem > len)
+        return false;
+    uint bit = index % 8;
+    bool prevVal = !!(ptr[elem] & (1 << bit));
+    if (newVal == prevVal)
+        return false;
+    if (newVal)
+        ptr[elem] |= (1 << bit);
+    else
+        ptr[elem] &= ~(1 << bit);
+    return true;
+}
 
 int main(void) {
   const uint LED_PIN = PICO_DEFAULT_LED_PIN;
@@ -95,14 +108,10 @@ int main(void) {
 
   tusb_init();
 
-  uint64_t init_time = get_current_time_us();
-  const uint64_t check_usb_duration = 1000 * 1000; // 1s
-
   set_led_on(true);
 
   report.modifier = 0;
   memset(report.keycode, 0, sizeof(report.keycode));
-  memcpy(&old_report, &report, sizeof(report));
 
   for (int i = 0; i < 5; i++) {
       uint gpio = gpio_rows[i];
@@ -116,64 +125,71 @@ int main(void) {
       gpio_pull_down(gpio);
   }
 
+  const uint key_table[5][6] = {
+      {HID_KEY_A, HID_KEY_B, HID_KEY_C, HID_KEY_D, HID_KEY_E, HID_KEY_1},
+      {HID_KEY_F, HID_KEY_G, HID_KEY_H, HID_KEY_I, HID_KEY_J, HID_KEY_2},
+      {HID_KEY_K, HID_KEY_L, HID_KEY_M, HID_KEY_N, HID_KEY_O, HID_KEY_3},
+      {HID_KEY_P, HID_KEY_Q, HID_KEY_R, HID_KEY_S, HID_KEY_T, HID_KEY_4},
+      {HID_KEY_U, HID_KEY_V, HID_KEY_W, HID_KEY_X, HID_KEY_Y, HID_KEY_5},
+  };
 
-  absolute_time_t next_timepoint = get_absolute_time();
+  uint8_t magic[13];
+  memset(magic, 0, sizeof(magic));
+  set_bit(true, key_table[0][0] - HID_KEY_A, magic, sizeof(magic));
+  set_bit(true, key_table[3][0] - HID_KEY_A, magic, sizeof(magic));
+  set_bit(true, key_table[0][5] - HID_KEY_A, magic, sizeof(magic));
+  set_bit(true, key_table[3][5] - HID_KEY_A, magic, sizeof(magic));
+
+  uint8_t debounce_table[5][6] = {
+      {0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0},
+  };
+  const uint8_t debounce_cycles = 3;
+
+  uint64_t next_timepoint = get_current_time_us();
+  bool sent = false;
   while (true) {
-    next_timepoint = delayed_by_us(next_timepoint, 1000);
     do {
       tud_task();
     } while (get_current_time_us() < next_timepoint);
+    next_timepoint = delayed_by_us(next_timepoint, 1000);
 
-    if (get_bootsel_button()) {
+    if (get_bootsel_button())
       reset_usb_boot(0, 0);
-    }
 
-    uint key_table[5][6] = {
-        {HID_KEY_A, HID_KEY_B, HID_KEY_C, HID_KEY_D, HID_KEY_E, HID_KEY_1},
-        {HID_KEY_F, HID_KEY_G, HID_KEY_H, HID_KEY_I, HID_KEY_J, HID_KEY_2},
-        {HID_KEY_K, HID_KEY_L, HID_KEY_M, HID_KEY_N, HID_KEY_O, HID_KEY_3},
-        {HID_KEY_P, HID_KEY_Q, HID_KEY_R, HID_KEY_S, HID_KEY_T, HID_KEY_4},
-        {HID_KEY_U, HID_KEY_V, HID_KEY_W, HID_KEY_X, HID_KEY_Y, HID_KEY_5},
-    };
-
-    bool magic = true;
+    bool changed = false;
     for (uint row = 0; row < 5; ++row)
     {
         gpio_put(gpio_rows[row], true);
         sleep_us(1);
         for (uint col = 0; col < 6; ++col)
         {
-            uint key = key_table[row][col];
-            uint num = key - HID_KEY_A;
-            uint elem = num / 8;
-            uint bit = num % 8;
-            bool set = gpio_get(gpio_cols[col]);
-            if (set)
-                report.keycode[elem] |= (1 << bit);
+            if (debounce_table[row][col] > 0)
+                debounce_table[row][col]--;
             else
-                report.keycode[elem] &= ~(1 << bit);
-
-            if (magic)
             {
-                if ((col == 0 || col == 5) && (row == 0 || row == 3))
-                    magic = set;
-                else
-                    magic = !set;
+                bool set = gpio_get(gpio_cols[col]);
+                uint index = key_table[row][col] - HID_KEY_A;
+                if (set_bit(set, index, report.keycode, sizeof(report.keycode)))
+                {
+                    changed = true;
+                    debounce_table[row][col] = debounce_cycles;
+                }
             }
         }
         gpio_put(gpio_rows[row], false);
-        sleep_us(1);
     }
 
-    if (magic)
+    if (memcmp(magic, report.keycode, sizeof(magic)) == 0)
       reset_usb_boot(0, 0);
 
     if (!tud_ready())
        continue;
-    if (memcmp(&old_report, &report, sizeof(report)) == 0)
-      continue;
-    if (tud_hid_report(0, &report, sizeof(report)))
-      memcpy(&old_report, &report, sizeof(report));
+    if (changed || !sent)
+      sent = tud_hid_report(0, &report, sizeof(report));
   }
 }
 
@@ -181,25 +197,13 @@ int main(void) {
 // Device callbacks
 //--------------------------------------------------------------------+
 
-// Invoked when device is mounted
-void tud_mount_cb(void) { usb_mounted = true; }
-
-// Invoked when device is unmounted
-void tud_umount_cb(void) { usb_mounted = false; }
-
-void tud_suspend_cb(bool remote_wakeup_en) {}
-
-void tud_resume_cb(void) {}
-
 uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id,
                                hid_report_type_t report_type, uint8_t *buffer,
                                uint16_t reqlen) {
-  // useless or wtf?
   return 0;
 }
 
 void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id,
                            hid_report_type_t report_type, uint8_t const *buffer,
                            uint16_t bufsize) {
-  // useless or wtf?
 }
