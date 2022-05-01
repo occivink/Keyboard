@@ -76,8 +76,7 @@ bool __no_inline_not_in_flash_func(get_bootsel_button)() {
 void set_led_on(bool on) { gpio_put(PICO_DEFAULT_LED_PIN, on); }
 
 typedef struct TU_ATTR_PACKED {
-  uint8_t modifier;    /**< Keyboard modifier (KEYBOARD_MODIFIER_* masks). */
-  uint8_t keycode[13]; /**< Key codes of the currently pressed keys. */
+  uint8_t keycodes[14]; /**< Key codes of the currently pressed keys. */
 } keyboard_report_t;
 
 keyboard_report_t report;
@@ -85,12 +84,22 @@ keyboard_report_t report;
 uint gpio_rows[] = {2,6,12,14,15};
 uint gpio_cols[] = {0,4,9,7,13,11};
 
-bool set_bit(bool newVal, uint index, uint8_t* ptr, uint len)
+bool set_bit(bool newVal, uint hid_key, uint8_t ptr[14])
 {
-    uint elem = index / 8;
-    if (elem > len)
+    uint elem;
+    uint bit;
+    if (hid_key >= HID_KEY_CONTROL_LEFT && hid_key <= HID_KEY_GUI_RIGHT)
+    {
+        bit = hid_key - HID_KEY_CONTROL_LEFT;
+        elem = 0;
+    }
+    else if (hid_key >= HID_KEY_A && hid_key <= HID_KEY_F16)
+    {
+        bit = (hid_key - HID_KEY_A) % 8;
+        elem = (hid_key - HID_KEY_A) / 8 + 1;
+    }
+    else
         return false;
-    uint bit = index % 8;
     bool prevVal = !!(ptr[elem] & (1 << bit));
     if (newVal == prevVal)
         return false;
@@ -110,8 +119,7 @@ int main(void) {
 
   set_led_on(true);
 
-  report.modifier = 0;
-  memset(report.keycode, 0, sizeof(report.keycode));
+  memset(report.keycodes, 0, sizeof(report.keycodes));
 
   for (int i = 0; i < 5; i++) {
       uint gpio = gpio_rows[i];
@@ -126,19 +134,19 @@ int main(void) {
   }
 
   const uint key_table[5][6] = {
-      {HID_KEY_A, HID_KEY_B, HID_KEY_C, HID_KEY_D, HID_KEY_E, HID_KEY_1},
-      {HID_KEY_F, HID_KEY_G, HID_KEY_H, HID_KEY_I, HID_KEY_J, HID_KEY_2},
-      {HID_KEY_K, HID_KEY_L, HID_KEY_M, HID_KEY_N, HID_KEY_O, HID_KEY_3},
-      {HID_KEY_P, HID_KEY_Q, HID_KEY_R, HID_KEY_S, HID_KEY_T, HID_KEY_4},
-      {HID_KEY_U, HID_KEY_V, HID_KEY_W, HID_KEY_X, HID_KEY_Y, HID_KEY_5},
+      {HID_KEY_A, HID_KEY_B, HID_KEY_C, HID_KEY_D, HID_KEY_E, HID_KEY_CONTROL_LEFT},
+      {HID_KEY_F, HID_KEY_G, HID_KEY_H, HID_KEY_I, HID_KEY_J, HID_KEY_ALT_LEFT},
+      {HID_KEY_K, HID_KEY_L, HID_KEY_M, HID_KEY_N, HID_KEY_O, HID_KEY_SHIFT_LEFT},
+      {HID_KEY_P, HID_KEY_Q, HID_KEY_R, HID_KEY_S, HID_KEY_T, HID_KEY_GUI_LEFT},
+      {HID_KEY_U, HID_KEY_V, HID_KEY_W, HID_KEY_X, HID_KEY_NONE, HID_KEY_NONE},
   };
 
-  uint8_t magic[13];
+  uint8_t magic[14];
   memset(magic, 0, sizeof(magic));
-  set_bit(true, key_table[0][0] - HID_KEY_A, magic, sizeof(magic));
-  set_bit(true, key_table[3][0] - HID_KEY_A, magic, sizeof(magic));
-  set_bit(true, key_table[0][5] - HID_KEY_A, magic, sizeof(magic));
-  set_bit(true, key_table[3][5] - HID_KEY_A, magic, sizeof(magic));
+  set_bit(true, key_table[0][0], magic);
+  set_bit(true, key_table[3][0], magic);
+  set_bit(true, key_table[0][5], magic);
+  set_bit(true, key_table[3][5], magic);
 
   uint8_t debounce_table[5][6] = {
       {0, 0, 0, 0, 0, 0},
@@ -172,8 +180,8 @@ int main(void) {
             else
             {
                 bool set = gpio_get(gpio_cols[col]);
-                uint index = key_table[row][col] - HID_KEY_A;
-                if (set_bit(set, index, report.keycode, sizeof(report.keycode)))
+                uint index = key_table[row][col];
+                if (set_bit(set, index, report.keycodes))
                 {
                     changed = true;
                     debounce_table[row][col] = debounce_cycles;
@@ -183,7 +191,7 @@ int main(void) {
         gpio_put(gpio_rows[row], false);
     }
 
-    if (memcmp(magic, report.keycode, sizeof(magic)) == 0)
+    if (memcmp(magic, report.keycodes, sizeof(magic)) == 0)
       reset_usb_boot(0, 0);
 
     if (!tud_ready())
