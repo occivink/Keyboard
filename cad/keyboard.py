@@ -369,8 +369,9 @@ class Controller:
     board_edge_to_cable_shell = 2.5 # distance between board edge to cable shell
     usb_bottom_from_board_bottom = 0.5 # distance from board bottom to usb socket bottom
 
-    def __init__(self, pos, usb_top_height, total_height, pillar_diam):
+    def __init__(self, pos, usb_top_height, total_height, pillar_diam, mirror):
         self.pos = pos
+        self.mirror = mirror
         self.board_z_pos = usb_top_height - (self.usb_bottom_from_board_bottom + self.usb_height)
         self.total_height = total_height
         self.pillar_diam = pillar_diam
@@ -398,7 +399,7 @@ class Controller:
 
         pin_hole = cylinder(d=self.pin_hole_diam, h=self.total_height - self.board_height - self.board_z_pos, segments = 10)
         pin_hole = translate([
-                self.button_dist_to_left,
+                self.button_dist_to_left if not self.mirror else self.board_width - self.button_dist_to_left,
                 self.board_length - self.button_dist_to_top,
                 self.board_height
             ])(pin_hole)
@@ -599,6 +600,7 @@ def main() -> int:
     thumb_cluster_key_count = 4
     roundness = 1
     precision = 0.01
+    right_hand = False
 
     tc = ThumbCluster(
         key_count = thumb_cluster_key_count,
@@ -640,6 +642,7 @@ def main() -> int:
         usb_top_height = height - top_height,
         total_height = height,
         pillar_diam = 4,
+        mirror = right_hand,
     )
 
     weights = []
@@ -783,8 +786,8 @@ def main() -> int:
         + bot
     )
 
-    # add mirrored part
-    #out = out + translate([320,0,0])(scale([-1,1,1])(out))
+    if right_hand:
+        out = scale([-1,1,1])(out)
 
     scad_render_to_file(out, "out.scad")
 
