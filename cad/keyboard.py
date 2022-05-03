@@ -630,7 +630,7 @@ def main() -> int:
     wall_full_width=wall_outer_width + wall_inner_width
 
     jack = JackSocket(
-        pos = [sh.panel_right() - wall_full_width , 10],
+        pos = [sh.panel_right() - wall_full_width , 6],
         height = height/2,
         nut_offset = wall_full_width,
     )
@@ -661,7 +661,8 @@ def main() -> int:
         [40,4],      # bot left
         [35,74],     # top left
         [77.8,78.2], # top right
-        [132,-4]     # bot right
+        [132,17],    # bot right
+        [133,-19],   # bot right
     ]:
         screws.append(Screw(
             xy_pos = pos,
