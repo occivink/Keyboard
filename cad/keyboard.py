@@ -446,17 +446,28 @@ class Screw:
         self.z_elevation = z_elevation
 
     def make_top_hole(self):
+        # add some bridging to make it possible to print above the nut hole
         nut_z_pos = self.z_elevation + self.head_height + self.thread_height - self.nut_height
         nut_hole = cylinder(d=self.nut_diameter, h=self.nut_height, segments=6)
-        res = translate([0,0,nut_z_pos])(nut_hole)
-        thread_hole = cylinder(d=self.thread_diameter, h=self.thread_height, segments=20)
-        res += translate([0,0,self.z_elevation + self.head_height])(thread_hole)
-        return translate(self.xy_pos)(res)
+        nut_hole = translate([0,0,nut_z_pos])(nut_hole)
+        nut_hole += translate([0,0,nut_z_pos - layer_height])(linear_extrude(layer_height)(
+            square([self.thread_diameter, self.nut_diameter], center=True)))
+        nut_hole += translate([0,0,nut_z_pos - 2 * layer_height])(linear_extrude(layer_height)(
+            square([self.thread_diameter, self.thread_diameter], center=True)))
+        thread_hole = cylinder(d=self.thread_diameter, h=self.thread_height, segments=30)
+        thread_hole = translate([0,0,self.z_elevation + self.head_height])(thread_hole)
+        return translate(self.xy_pos)(nut_hole + thread_hole)
 
     def make_bot_hole(self):
+        # use the same trick as in make_top_hole()
         head_hole_height = self.head_height + self.z_elevation
-        cyl = cylinder(d=self.head_diameter, h=head_hole_height, segments=20)
-        cyl += translate([0,0,head_hole_height])(cylinder(d=self.thread_diameter, h=self.thread_height, segments=20))
+        cyl = cylinder(d=self.head_diameter, h=head_hole_height, segments=30)
+        cyl += up(head_hole_height)(linear_extrude(layer_height)(
+            square([self.thread_diameter,self.head_diameter], center=True)))
+        cyl += up(head_hole_height+layer_height)(linear_extrude(layer_height)(
+            square([self.thread_diameter,self.thread_diameter], center=True)))
+        cyl += translate([0,0,head_hole_height + 2 * layer_height])(
+            cylinder(d=self.thread_diameter, h=self.thread_height, segments=30))
         return translate(self.xy_pos)(cyl)
 
     def make_top_shape(self):
