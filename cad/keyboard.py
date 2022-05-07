@@ -211,13 +211,12 @@ class ThumbCluster:
                 square(self.switch_hole_size, center=True)))
         return shape
 
-    def make_keycaps(self):
-        shape = square(0)
+    def switches_positions(self):
+        res = []
         for i in range(0, self.get_key_count()):
             key_pos, key_angle = self.get_key_coord(i, 0, 0)
-            shape += translate(key_pos)(rotate([0,0,key_angle / math.pi * 180])(
-                square(self.keycap_size, center=True)))
-        return shape
+            res.append([key_pos, key_angle / math.pi * 180])
+        return res
 
     def get_top_left(self):
         return self.get_key_coord(0, -self.keycap_size[0]/2 - self.offset, self.keycap_size[1]/2 + self.offset)[0]
@@ -315,12 +314,12 @@ class Shell:
                 res += translate(key_pos)(square(self.switch_hole_size, center=True))
         return res
 
-    def make_keycaps(self):
-        res = square(0)
+    def switches_positions(self):
+        res = []
         for row in range(0, self.rows):
             for col in range(0, self.columns):
                 key_pos = self.get_key_position(row,  col,  center=True)
-                res += translate(key_pos)(square(self.keycap_size, center=True))
+                res.append([key_pos, 0])
         return res
 
 class WeightedDisc:
@@ -614,6 +613,27 @@ def main() -> int:
     precision = 0.1
     right_hand = False
 
+    choc_shape = (cube(0)
+        + translate([-7,-7,-2.2])(cube([14,14,2.2])) # bottom
+        + translate([-7.5,-7.5,0])(cube([15,15,.8])) # lip
+        + translate([-7,-7,.8])(cube([14,14,2])) # top
+        + translate([-10.3/2,-4.5/2,2.8])(cube([10.3,4.5,3])) # actuator
+        + translate([-9,-8.5,11-2.2-4])(cube([18,17,4])) # cap
+    )
+    mx_shape = (cube(0)
+        + translate([-7,-7,-4.5])(cube([14,14,4.5])) # bottom
+        + translate([-15.6/2,-15.6/2,0])(cube([15.6,15.6,1])) # lip
+        + up(1)(hull()( # top
+            translate([-14/2,-14/2])(cube([14,14,eps]))
+            + translate([-10/2,-10/2,5.4])(cube([10,10,eps]))
+            )) # cap
+        + translate([-4/2,-4/2,6.4])(cube([4,4,4.5])) # actuator
+        + up(14-8)(hull()( # cap
+            translate([-17.3/2,-17.3/2])(cube([17.3,17.3,eps]))
+            + translate([-12/2,-12/2,8])(cube([12,12,eps]))
+            )) # cap
+    )
+
     tc = ThumbCluster(
         key_count = thumb_cluster_key_count,
         bezier_points = [ [0,0], ["POLAR", 3, -5], ["POLAR", 3, 125], [7,-4] ],
@@ -739,13 +759,9 @@ def main() -> int:
         height = height,
     )
 
-    keycaps = tc.make_keycaps() + sh.make_keycaps()
     phantoms = cube(0)
-    phantoms += translate([0,0,4])(linear_extrude(height=2)(
-        tc.make_keycaps() + sh.make_keycaps()))
-    phantoms += linear_extrude(height=4)(
-        tc.make_switch_holes() + sh.make_switch_holes())
-    phantoms = translate([0,0,height-top_height])(phantoms)
+    for pos in  sh.switches_positions() + tc.switches_positions():
+        phantoms += up(height)(translate(pos[0])(rotate([0,0,pos[1]])(choc_shape)))
     phantoms += controller.make_shape()
     phantoms += jack.make_shape()
     phantoms = phantoms.set_modifier('%')
