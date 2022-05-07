@@ -594,7 +594,6 @@ def make_top_and_bot(
 
 def main() -> int:
     shell_offset = 1 # the 'border'
-    keycap_size = [18,17]
     keycap_dist = [1,1]
     switch_hole_size = [13.7,13.7]
     thumb_keycap_spacing = .6
@@ -612,6 +611,8 @@ def main() -> int:
     roundness = 1
     precision = 0.1
     right_hand = False
+    choc_switches = True
+    keycap_size = [18,17 if choc_switches else 18]
 
     choc_shape = (cube(0)
         + translate([-7,-7,-2.2])(cube([14,14,2.2])) # bottom
@@ -629,10 +630,11 @@ def main() -> int:
             )) # cap
         + translate([-4/2,-4/2,6.4])(cube([4,4,4.5])) # actuator
         + up(14-8)(hull()( # cap
-            translate([-17.3/2,-17.3/2])(cube([17.3,17.3,eps]))
+            translate([-18.3/2,-18.3/2])(cube([18.3,18.3,eps]))
             + translate([-12/2,-12/2,8])(cube([12,12,eps]))
             )) # cap
     )
+    switch_and_keycap = choc_shape if choc_switches else mx_shape
 
     tc = ThumbCluster(
         key_count = thumb_cluster_key_count,
@@ -761,7 +763,7 @@ def main() -> int:
 
     phantoms = cube(0)
     for pos in  sh.switches_positions() + tc.switches_positions():
-        phantoms += up(height)(translate(pos[0])(rotate([0,0,pos[1]])(choc_shape)))
+        phantoms += up(height)(translate(pos[0])(rotate([0,0,pos[1]])(switch_and_keycap)))
     phantoms += controller.make_shape()
     phantoms += jack.make_shape()
     phantoms = phantoms.set_modifier('%')
