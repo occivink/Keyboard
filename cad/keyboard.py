@@ -300,7 +300,7 @@ class Shell:
             [self.shell_offset, self.shell_offset],
             [
                 col * (self.switch_hole_size[0] + self.switch_hole_dist[0]),
-                (row + self.column_stagger[col]) * (self.switch_hole_size[1] + self.switch_hole_dist[1]),
+                row * (self.switch_hole_size[1] + self.switch_hole_dist[1]) + self.column_stagger[col],
             ]
         )
 
@@ -608,9 +608,10 @@ def main() -> int:
                          # not as tight
     rows = 4
     columns = 6
+    column_stagger = [0, 0, 4.5, 9, 4.5, 18 * .15]
     thumb_cluster_key_count = 4
     roundness = 1
-    precision = 0.01
+    precision = 0.1
     right_hand = False
 
     tc = ThumbCluster(
@@ -635,7 +636,7 @@ def main() -> int:
         keycap_dist = keycap_dist,
         switch_hole_size = switch_hole_size,
         thumb_cluster = tc,
-        column_stagger = [0,  0,  0.25,  0.5,  0.25,  0.15],
+        column_stagger = column_stagger,
         shell_offset = shell_offset,
         precision = precision,
     )
@@ -751,45 +752,6 @@ def main() -> int:
     phantoms += controller.make_shape()
     phantoms += jack.make_shape()
     phantoms = phantoms.set_modifier('%')
-
-    #plate = square([20,20]);
-    #screw = Screw(
-    #        xy_pos = [10,10],
-    #        pillar_diam = 7,
-    #        z_elevation = 1,
-    #        top_height = 1)
-    #top, bot = make_top_and_bot(
-    #    shape_no_holes = plate,
-    #    top_shape = plate,
-    #    top_things = screw.make_top_shape(),
-    #    top_holes = screw.make_top_hole() + right(18)(cube([20,20,20])),
-    #    bot_shape = plate,
-    #    bot_things = screw.make_bot_shape(),
-    #    bot_holes = screw.make_bot_hole() + right(18)(cube([20,20,20])),
-    #    wall_full_width = wall_full_width,
-    #    wall_outer_width = wall_outer_width,
-    #    top_height = top_height,
-    #    bot_height = bot_height,
-    #    bottom_recess = 0.04,
-    #    height = height,
-    #)
-    #plate = square([30,60])
-    #controller = Controller(pos = [25,60], usb_top_height = height - top_height - .4, total_height=height, pillar_diam=4)
-    #top, bot = make_top_and_bot(
-    #   shape_no_holes = plate,
-    #   top_shape = plate,
-    #   top_things = controller.make_top_support(),
-    #   top_holes = controller.make_top_hole() + right(28)(cube([100,100,100])),
-    #   bot_shape = plate,
-    #   bot_things = controller.make_bottom_support(),
-    #   bot_holes = right(28)(cube([100,100,100])),
-    #   wall_full_width = wall_full_width,
-    #   wall_outer_width = wall_outer_width,
-    #   top_height = top_height,
-    #   bot_height = bot_height,
-    #   bottom_recess = bottom_recess,
-    #   height = height,
-    #)
 
     out = (cube(0)
         + up(10)(top)
