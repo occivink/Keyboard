@@ -616,16 +616,13 @@ def main() -> int:
 
     tc = ThumbCluster(
         key_count = thumb_cluster_key_count,
-        bezier_points = [
-            [0,0],
-                ["POLAR", 3, -5],
-                ["POLAR", 3, 125],
-            [7,-4]
-        ],
+        bezier_points = [ [0,0], ["POLAR", 3, -5], ["POLAR", 3, 125], [7,-4] ],
+        #bezier_points = [ [0,0], ["POLAR", 3, -10], ["POLAR", 2, 115], [5.5,-4.5] ],
         keycap_size = keycap_size,
         keycap_spacing = thumb_keycap_spacing,
         switch_hole_size = switch_hole_size,
         position = [77, -12.5],
+        #position = [77, -13.8],
         offset = shell_offset,
         precision = precision,
     )
