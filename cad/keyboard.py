@@ -581,13 +581,15 @@ def make_top_and_bot(
     bot -= bot_holes
     bot *= linear_extrude(height=height)(bot_shape) # cut off protruding things (screws, for example
 
-    wall = linear_extrude(height=height)(shape_no_holes - offset(delta=-wall_full_width)(shape_no_holes))
+    wall = linear_extrude(height=height)(
+        shape_no_holes - offset(delta=-wall_full_width)(shape_no_holes))
 
     top = linear_extrude(height=top_height)(top_shape)
     top = translate([0,0,height-top_height])(top)
     top += (wall - bot) # make sure that the wall does not overlap with the bottom
     top += top_things
     top -= top_holes
+    top -= bot_holes
     bot *= linear_extrude(height=height)(offset(delta=-bottom_recess)(bot_shape))
 
     return top, bot
@@ -694,7 +696,7 @@ def main() -> int:
     for pos in [
         [40,4],      # bot left
         [35,74],     # top left
-        [77.8,78.2], # top right
+        [77.5,78.2], # top right
         [132,17],    # bot right
         [133,-19],   # bot right
     ]:
@@ -769,9 +771,8 @@ def main() -> int:
     phantoms = phantoms.set_modifier('%')
 
     out = (cube(0)
-        + up(10)(top)
-        + up(10)(phantoms)
-        + bot
+         + up(0)(top + phantoms)
+         #+ bot
     )
 
     if right_hand:
