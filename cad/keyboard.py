@@ -272,7 +272,7 @@ class Shell:
                 ["SHARP"],
             [self.panel_left() + self.panel_width(), 0],
                 ["RELATIVE", 0, -8],
-                ["POLAR", 12, 125],
+                ["POLAR", 8, 125],
             self.thumb_cluster.get_top_right(), # THUMB CLUSTER, TOP RIGHT
                 ["SHARP"],
                 ["SHARP"],
@@ -640,13 +640,15 @@ def main() -> int:
 
     tc = ThumbCluster(
         key_count = thumb_cluster_key_count,
-        bezier_points = [ [0,0], ["POLAR", 3, -5], ["POLAR", 3, 125], [7,-4] ],
+        #bezier_points = [ [0,0], ["POLAR", 3, -5], ["POLAR", 3, 125], [7,-4] ],
+         bezier_points = [ [0,0], ["POLAR", 30, -5], ["POLAR", 30, 122], [67.5,-42.5] ],
+        #bezier_points = [ [0,0], ["POLAR", 3, -5], ["POLAR", 3, 120], [6.5,-4.5] ],
         #bezier_points = [ [0,0], ["POLAR", 3, -10], ["POLAR", 2, 115], [5.5,-4.5] ],
         keycap_size = keycap_size,
         keycap_spacing = thumb_keycap_spacing,
         switch_hole_size = switch_hole_size,
-        position = [77, -12.5],
-        #position = [77, -13.8],
+        #position = [77, -12.5],
+         position = [77, -14],
         offset = shell_offset,
         precision = precision,
     )
