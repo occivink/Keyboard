@@ -25,6 +25,7 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "hardware/adc.h"
@@ -37,6 +38,7 @@
 #include "pico/stdlib.h"
 #include "pico/time.h"
 #include "pico/types.h"
+#include "pico/util/queue.h"
 
 #include "tusb.h"
 
@@ -78,15 +80,23 @@ void set_led_on(bool on) { gpio_put(PICO_DEFAULT_LED_PIN, on); }
 
 #if IS_LEFT
 
-uint gpio_rows[] = {2, 6, 12, 14, 15};
-uint gpio_cols[] = {11, 13, 7, 9, 4, 0};
+const bool force_slave = true;
+const uint gpio_rows[] = {2, 6, 12, 14, 15};
+const uint gpio_cols[] = {11, 13, 7, 9, 4, 0};
+#define UART uart0
+#define UART_TX 16
+#define UART_RX 17
 #define LEFT_KEY_TABLE this_key_table
 #define RIGHT_KEY_TABLE other_key_table
 
 #else
 
-uint gpio_rows[] = {2, 5, 9, 14, 10};
-uint gpio_cols[] = {1, 4, 18, 19, 16, 17};
+const bool force_slave = false;
+const uint gpio_rows[] = {2, 5, 9, 14, 10};
+const uint gpio_cols[] = {1, 4, 18, 19, 16, 17};
+#define UART uart0
+#define UART_TX 12
+#define UART_RX 13
 #define LEFT_KEY_TABLE other_key_table
 #define RIGHT_KEY_TABLE this_key_table
 
@@ -132,10 +142,21 @@ bool set_bit(bool newVal, uint hid_key, uint8_t report[14]) {
     return true;
 }
 
+queue_t queue_other_half;
+void on_uart_rx(void) {
+    while (uart_is_readable(UART)) {
+        uint8_t val;
+        uart_read_blocking(UART, &val, 1);
+        queue_try_add(&queue_other_half, &val);
+    }
+}
+
 int main(void) {
     const uint LED_PIN = PICO_DEFAULT_LED_PIN;
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
+
+    queue_init(&queue_other_half, 1, 16);
 
     tusb_init();
 
@@ -151,15 +172,26 @@ int main(void) {
         gpio_pull_down(gpio);
     }
 
+    uart_init(UART, 115200);
+    gpio_set_function(UART_TX, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX, GPIO_FUNC_UART);
+    uart_set_hw_flow(UART, false, false);
+    uart_set_format(UART, 8, 1, UART_PARITY_EVEN);
+    uart_set_fifo_enabled(UART, false);
+
+    irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
+    irq_set_enabled(UART0_IRQ, true);
+    uart_set_irq_enables(UART, true, false);
+
     const uint8_t debounce_cycles = 3;
     // the debounce table only applies to the current controller
     // the other half takes care of its own debouncing
     uint8_t debounce_table[5][6];
+    // only used by the slave side
     bool state_table[5][6];
 
     for (int i = 0; i < 5; ++i)
-        for (int j = 0; j < 6; ++j)
-        {
+        for (int j = 0; j < 6; ++j) {
             state_table[i][j] = false;
             debounce_table[i][j] = 0;
         }
@@ -185,19 +217,19 @@ int main(void) {
         if (get_bootsel_button())
             reset_usb_boot(0, 0);
 
-        if (tud_mounted())
-        {
+        if (!force_slave && tud_mounted()) {
             // master side
             bool changed = false;
-            for (uint row = 0; row < 5; ++row) {
+
+            // check values of local matrix
+            for (uint8_t row = 0; row < 5; ++row) {
                 gpio_put(gpio_rows[row], true);
                 sleep_us(1);
-                for (uint col = 0; col < 6; ++col) {
-                    if (debounce_table[row][col] > 0)
+                for (uint8_t col = 0; col < 6; ++col) {
+                    if (debounce_table[row][col] > 0) {
                         debounce_table[row][col]--;
-                    else {
+                    } else {
                         bool set = gpio_get(gpio_cols[col]);
-                        state_table[row][col] = set;
                         uint hid_key = this_key_table[row][col];
                         if (set_bit(set, hid_key, report)) {
                             changed = true;
@@ -208,7 +240,21 @@ int main(void) {
                 gpio_put(gpio_rows[row], false);
             }
 
-            // TODO handle the uart queue
+            // handle values we received from the other matrix over UART
+            uint8_t value;
+            while (queue_try_remove(&queue_other_half, &value)) {
+                bool set = value & (1 << 7);
+                value &= ~(1 << 7);
+
+                uint8_t col = value % 6;
+                uint8_t row = value / 6;
+                if (row < 5) {
+                    uint hid_key = other_key_table[row][col];
+                    if (set_bit(set, hid_key, report)) {
+                        changed = true;
+                    }
+                }
+            }
 
             if (memcmp(magic, report, sizeof(magic)) == 0)
                 reset_usb_boot(0, 0);
@@ -221,20 +267,24 @@ int main(void) {
         } else {
 
             // slave side
-            for (uint row = 0; row < 5; ++row) {
+            uint8_t count = 0;
+            for (uint8_t row = 0; row < 5; ++row) {
                 gpio_put(gpio_rows[row], true);
                 sleep_us(1);
-                for (uint col = 0; col < 6; ++col) {
-                    if (debounce_table[row][col] > 0)
+                for (uint8_t col = 0; col < 6; ++col) {
+                    if (debounce_table[row][col] > 0) {
                         debounce_table[row][col]--;
-                    else {
+                    } else {
                         bool set = gpio_get(gpio_cols[col]);
-                        if (set != state_table[row][col])
-                        {
+                        if (set != state_table[row][col]) {
                             state_table[row][col] = set;
-                            // TODO send over UART
+                            uint8_t value = count;
+                            if (set)
+                                value |= (1 << 7);
+                            uart_write_blocking(UART, &value, 1);
                         }
                     }
+                    count++;
                 }
                 gpio_put(gpio_rows[row], false);
             }
