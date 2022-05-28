@@ -589,7 +589,7 @@ def make_top_and_bot(
     top += (wall - bot) # make sure that the wall does not overlap with the bottom
     top += top_things
     top -= top_holes
-    top -= bot_holes
+    #top -= bot_holes
     bot *= linear_extrude(height=height)(offset(delta=-bottom_recess)(bot_shape))
 
     return top, bot
