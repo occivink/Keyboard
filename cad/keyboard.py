@@ -598,7 +598,7 @@ def main() -> int:
     shell_offset = 1 # the 'border'
     keycap_dist = [1,1]
     switch_hole_size = [13.7,13.7]
-    thumb_keycap_spacing = .6
+    thumb_keycap_spacing = .4
     height = 10 # total height, including bot and top plates
     top_height = 2
     bot_height = 2
