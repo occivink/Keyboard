@@ -125,14 +125,16 @@ bool set_bit(bool newVal, uint hid_key, uint8_t report[14]) {
     uint elem;
     uint bit;
     if (hid_key >= HID_KEY_CONTROL_LEFT && hid_key <= HID_KEY_GUI_RIGHT) {
+        // the first byte in the HID report is the modifier stuff
         bit = hid_key - HID_KEY_CONTROL_LEFT;
         elem = 0;
     } else if (hid_key >= HID_KEY_A && hid_key <= HID_KEY_F16) {
+        // then the rest of the keys
         bit = (hid_key - HID_KEY_A) % 8;
         elem = (hid_key - HID_KEY_A) / 8 + 1;
     } else
         return false;
-    bool prevVal = !!(report[elem] & (1 << bit));
+    bool prevVal = report[elem] & (1 << bit);
     if (newVal == prevVal)
         return false;
     if (newVal)
@@ -152,6 +154,8 @@ void on_uart_rx(void) {
 }
 
 int main(void) {
+    set_sys_clock_48mhz();
+
     const uint LED_PIN = PICO_DEFAULT_LED_PIN;
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
@@ -212,7 +216,7 @@ int main(void) {
         do {
             tud_task();
         } while (get_current_time_us() < next_timepoint);
-        next_timepoint = delayed_by_us(next_timepoint, 1000);
+        next_timepoint += 1000;
 
         if (get_bootsel_button())
             reset_usb_boot(0, 0);
