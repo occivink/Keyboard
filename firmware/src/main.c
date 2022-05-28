@@ -1,43 +1,9 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2019 Ha Thach (tinyusb.org)
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
-
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "hardware/adc.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/structs/ioqspi.h"
-#include "hardware/sync.h"
 #include "hardware/uart.h"
 #include "pico/bootrom.h"
 #include "pico/stdlib.h"
-#include "pico/time.h"
-#include "pico/types.h"
 #include "pico/util/queue.h"
 
 #include "tusb.h"
@@ -164,13 +130,13 @@ int main(void) {
 
     tusb_init();
 
-    for (int i = 0; i < 5; i++) {
-        uint gpio = gpio_rows[i];
+    for (uint8_t row = 0; row < 5; row++) {
+        uint gpio = gpio_rows[row];
         gpio_init(gpio);
         gpio_set_dir(gpio, GPIO_OUT);
     }
-    for (int i = 0; i < 6; i++) {
-        uint gpio = gpio_cols[i];
+    for (uint8_t col = 0; col < 6; col++) {
+        uint gpio = gpio_cols[col];
         gpio_init(gpio);
         gpio_set_dir(gpio, GPIO_IN);
         gpio_pull_down(gpio);
@@ -194,8 +160,8 @@ int main(void) {
     // only used by the slave side
     bool state_table[5][6];
 
-    for (int i = 0; i < 5; ++i)
-        for (int j = 0; j < 6; ++j) {
+    for (uint8_t i = 0; i < 5; ++i)
+        for (uint8_t j = 0; j < 6; ++j) {
             state_table[i][j] = false;
             debounce_table[i][j] = 0;
         }
@@ -203,6 +169,7 @@ int main(void) {
     uint8_t report[14];
     memset(report, 0, sizeof(report));
 
+    // the 'magic' report is a special key combination to enter flash mode on the pico
     uint8_t magic[14];
     memset(magic, 0, sizeof(magic));
     set_bit(true, this_key_table[0][0], magic);
