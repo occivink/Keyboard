@@ -604,15 +604,15 @@ def main() -> int:
     bot_height = 2
     wall_inner_width = 1 # the bottom plate is below the 'inner' wall
     wall_outer_width = 1 # but not below the out wall, which encloses it
-    bottom_recess = 0.00 # shrink the bottom plate by this much all around, so that the fit is
+    bottom_recess = 0.04 # shrink the bottom plate by this much all around, so that the fit is
                          # not as tight
     rows = 4
     columns = 6
     column_stagger = [0, 0, 4.5, 9, 4.5, 18 * .15]
     thumb_cluster_key_count = 4
     roundness = 1
-    precision = 0.1
-    right_hand = False
+    precision = 0.01
+    right_hand = True
     choc_switches = True
     keycap_size = [18,17 if choc_switches else 18]
 
