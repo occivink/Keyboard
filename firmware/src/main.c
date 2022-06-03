@@ -42,7 +42,7 @@ bool __no_inline_not_in_flash_func(get_bootsel_button)() {
 void set_led_on(bool on) { gpio_put(PICO_DEFAULT_LED_PIN, on); }
 
 // gpio_rows is defined left-to-right, and gpio_cols from top-to-bottom
-#define IS_LEFT 1
+#define IS_LEFT 0
 
 #if IS_LEFT
 
@@ -178,7 +178,7 @@ int main(void) {
     set_bit(true, this_key_table[3][5], magic);
 
     uint64_t next_timepoint = get_current_time_us();
-    bool sent = false;
+    bool force_send = true;
     while (true) {
         do {
             tud_task();
@@ -230,10 +230,15 @@ int main(void) {
             if (memcmp(magic, report, sizeof(magic)) == 0)
                 reset_usb_boot(0, 0);
 
-            if (!tud_ready())
-                continue;
-            if (changed || !sent)
-                sent = tud_hid_report(0, &report, sizeof(report));
+            if (tud_suspended()) {
+                if (changed) {
+                    tud_remote_wakeup();
+                }
+                force_send = true;
+            } else if (changed || force_send) {
+                bool ok = tud_hid_report(0, &report, sizeof(report));
+                force_send = !ok;
+            }
 
         } else {
 
