@@ -58,7 +58,7 @@ const uint gpio_cols[] = {9, 14, 6, 7, 3, 28};
 #else
 
 const bool force_slave = false;
-const uint gpio_rows[] = {2, 5, 9, 14, 10};
+const uint gpio_rows[] = {2, 5, 9, 14, 20};
 const uint gpio_cols[] = {1, 4, 18, 19, 16, 17};
 #define UART uart0
 #define UART_TX 12
