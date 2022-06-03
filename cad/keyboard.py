@@ -560,6 +560,120 @@ class Support:
             )
         )
 
+def make_channel(points, diam, segments):
+    prev = cube(0)
+    res = cube(0)
+    line = cube(0)
+    s = down(diam/2)(cylinder(d=diam, h=diam + eps, segments=15))
+    for p in range(len(points) - 1):
+        p1 = points[p]
+        p2 = points[p+1]
+        line += hull()(translate(p1)(s) + translate(p2)(s))
+    return line
+
+class SolderingJig:
+    mid_nub_diam = 3
+    aux_nub_diam = 1.5
+    aux_nub_dist = 5.2
+    top_pin_dist = 5.5
+    left_pin_x_dist = 5
+    left_pin_y_dist = 3.8
+    pin_diam = 1
+    wire_diam = 1.35
+    diode_diam = 2.1
+    diode_len = 3.5
+    diode_wire_diam = .7
+
+    def __init__(self, switches_pos, type, choc):
+        self.switches_pos = switches_pos
+        self.type = type
+        self.choc = choc
+
+    def make_shape(self):
+        plate_height = 3
+        holes = cube(0)
+        plates = cube(0)
+        channel = cube(0)
+
+        if self.type == 'diode':
+            res = cube([46, 10, 3])
+            res += translate([0,10,0])(cube([8, 4, 4]))
+            res -= translate([0,12,2.2])(rotate([0,90,0])(cylinder(d=2, h=8,segments=20)))
+            diode = (rotate([-90,0,0])(cylinder(d=self.diode_diam, h=self.diode_len, segments=20)) +
+                rotate([90,0,0])(down(50)(cylinder(d=self.diode_wire_diam, h=100, segments=20)))
+            )
+
+            for i in range(6):
+                res -= translate([12 + i * 6, 5, plate_height])(diode)
+            return res
+
+        prev_plate = None
+        for i in range(len(self.switches_pos)):
+            p = self.switches_pos[i]
+            plate = translate(p)(
+                (translate([-8,-7])(cube([7,14,plate_height])))
+                if self.type == 'vertical' else
+                translate([-7,-7])(cube([14,9,plate_height]))
+            )
+            if prev_plate:
+                plates += hull()(prev_plate + plate)
+            prev_plate = plate
+
+        if self.type == 'vertical':
+            for i in range(len(self.switches_pos)):
+                p = self.switches_pos[i]
+                pos = [-self.left_pin_x_dist, self.left_pin_y_dist]
+                channel += translate(p)(translate(pos)(down(self.wire_diam/2)(
+                    cylinder(d=3, h=self.wire_diam+eps, segments=20))))
+                holes += translate(p)(translate(pos)(cylinder(d=1.7, h=100, segments=20)))
+        elif self.type == 'horizontal':
+            for i in range(len(self.switches_pos)):
+                p = self.switches_pos[i]
+                pos = [4, -4]
+                plates += translate(p)(translate([4-4/2,-2.5])(
+                    cube([4,5,plate_height + .6])))
+                holes += translate(p)(translate([4-4/2,-10])(
+                    cube([4,7.5,plate_height])))
+                channel += translate(p)(translate(pos)(rotate([90,0,0])(
+                    down(50)(cylinder(d=1.8, h=100, segments=20)))))
+
+        wire_curve_points = []
+        for i in range(len(self.switches_pos)):
+            p = self.switches_pos[i]
+            if self.type == 'vertical':
+                if i == 0:
+                    wire_curve_points.append(sum_coords(p, [-8, -3]))
+                    wire_curve_points.append(["SHARP"])
+                    wire_curve_points.append(["RELATIVE", 0, -2])
+                else:
+                    wire_curve_points.append(["SHARP"])
+                    wire_curve_points.append(["SHARP"])
+                wire_curve_points.append(sum_coords(p, [-self.aux_nub_dist +self.aux_nub_diam/2 + self.wire_diam/2, 0]))
+                wire_curve_points.append(["RELATIVE", 0, 1])
+                wire_curve_points.append(["RELATIVE", 0, -1])
+                wire_curve_points.append(sum_coords(p, [-self.left_pin_x_dist-.4, self.left_pin_y_dist]))
+                if i == len(self.switches_pos) - 1:
+                    wire_curve_points.append(["SHARP"])
+                    wire_curve_points.append(["SHARP"])
+                    wire_curve_points.append(sum_coords(p, [-5,7]))
+            elif self.type == 'horizontal':
+                if i == 0:
+                    wire_curve_points.append(sum_coords(p, [-7, -4]))
+                    wire_curve_points.append(["SHARP"])
+                wire_curve_points.append(["RELATIVE", -12, 0])
+                wire_curve_points.append(sum_coords(p, [4, -4]))
+                wire_curve_points.append(["RELATIVE", 12, 0])
+                if i == len(self.switches_pos) - 1:
+                    wire_curve_points.append(["SHARP"])
+                    wire_curve_points.append(sum_coords(p, [7, -4]))
+
+        channel += make_channel(bezier_lines(wire_curve_points, 0.1), diam = self.wire_diam, segments=20)
+
+        channel = up(plate_height)(channel)
+        channel = down(self.wire_diam/2)(channel)
+        #holes = holes + up(.2)(holes) + up(.4)(holes)
+        return (plates - channel - holes)
+
 def make_top_and_bot(
         shape_no_holes,
         top_shape,
@@ -779,6 +893,27 @@ def main() -> int:
 
     if right_hand:
         out = scale([-1,1,1])(out)
+
+    jig = SolderingJig(
+        switches_pos = [sh.get_key_position(row = r, col = 0, center=True) for r in range(rows)],
+        type = 'vertical',
+        choc = choc_switches
+    )
+    jig2 = SolderingJig(
+        switches_pos = [sh.get_key_position(row = 0, col = c, center=True) for c in range(columns)],
+        type = 'horizontal',
+        choc = choc_switches
+    )
+    jig3 = SolderingJig(
+        switches_pos = [],
+        type = 'diode',
+        choc = choc_switches
+    )
+    #out = (cube(0)
+    #     + jig.make_shape()
+    #     + right(30)(jig2.make_shape())
+    #     + translate([30,30])(jig3.make_shape())
+    #)
 
     scad_render_to_file(out, "out.scad")
 
