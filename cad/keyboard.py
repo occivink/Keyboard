@@ -879,16 +879,51 @@ def main() -> int:
         height = height,
     )
 
+    alphanum_keys = cube(0)
+    other_keys = cube(0)
+    for i, pos in enumerate(sh.switches_positions()):
+        key = up(height)(translate(pos[0])(rotate([0,0,pos[1]])(switch_and_keycap)))
+        if i % 6 == 0:
+            other_keys += key
+        else:
+            alphanum_keys += key
+    for pos in tc.switches_positions():
+        other_keys += up(height)(translate(pos[0])(rotate([0,0,pos[1]])(switch_and_keycap)))
     phantoms = cube(0)
-    for pos in  sh.switches_positions() + tc.switches_positions():
-        phantoms += up(height)(translate(pos[0])(rotate([0,0,pos[1]])(switch_and_keycap)))
     phantoms += controller.make_shape()
     phantoms += jack.make_shape()
+
+    black = "#404040"
+    white = "#ffffff"
+    beige = "#eadebb"
+    gold = "#ffdf00"
+    gray = "#c9c9c9"
+    dark_gray = "#9a9a9a"
+    color_shell = black
+    color_middle_shell = beige
+    color_bottom_shell = black
+    color_alnum_keys = white
+    color_other_keys = gray
+
+    color_strip_height = 1.4
+    top = color(color_shell)(top)
+    top_middle = color(color_middle_shell)(up(color_strip_height)(linear_extrude(height - 2 * color_strip_height)(
+        offset(r=10 * eps)(projection(cut=True)(top)))))
+    top_bottom = color(color_bottom_shell)(linear_extrude(color_strip_height)(offset(r=10 * eps)(projection(cut=True)(top))))
+    bot = color(color_bottom_shell)(bot)
+    keys = color(color_alnum_keys)(alphanum_keys) + color(color_other_keys)(other_keys)
+    phantoms = color(gray)(phantoms)
+
     phantoms = phantoms.set_modifier('%')
+    keys = keys.set_modifier('%')
 
     out = (cube(0)
-         + up(0)(top + phantoms)
+         + top
+         + top_middle
+         + top_bottom
          #+ bot
+         + phantoms
+         + keys
     )
 
     if right_hand:
