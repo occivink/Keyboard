@@ -43,6 +43,7 @@ void set_led_on(bool on) { gpio_put(PICO_DEFAULT_LED_PIN, on); }
 
 // gpio_rows is defined left-to-right, and gpio_cols from top-to-bottom
 #define IS_LEFT 0
+#define DEBOUNCE_CYCLES 5
 
 #if IS_LEFT
 
@@ -71,18 +72,18 @@ const uint gpio_cols[] = {1, 4, 18, 19, 16, 17};
 // clang-format off
 #define K(K) HID_KEY_ ## K
 const uint LEFT_KEY_TABLE[5][6] = {
-    {K(GUI_LEFT)     , K(0)            , K(1)            , K(2)            , K(3)            , K(4)            },
-    {K(ALT_LEFT)     , K(Q)            , K(W)            , K(E)            , K(R)            , K(T)            },
-    {K(SHIFT_LEFT)   , K(A)            , K(S)            , K(D)            , K(F)            , K(G)            },
+    {K(PAGE_DOWN)    , K(0)            , K(1)            , K(2)            , K(3)            , K(4)            },
+    {K(BACKSPACE)    , K(Q)            , K(W)            , K(E)            , K(R)            , K(T)            },
+    {K(ALT_LEFT)     , K(A)            , K(S)            , K(D)            , K(F)            , K(G)            },
     {K(CONTROL_LEFT) , K(Z)            , K(X)            , K(C)            , K(V)            , K(B)            },
-    {K(NONE)         , K(NONE)         , K(ARROW_LEFT)   , K(BACKSPACE)    , K(SPACE)        , K(TAB)          },
+    {K(NONE)         , K(NONE)         , K(GUI_LEFT)     , K(SHIFT_LEFT)   , K(SPACE)        , K(TAB)          },
 };
 const uint RIGHT_KEY_TABLE[5][6] = {
-    {K(5)            , K(6)            , K(7)            , K(8)            , K(9)            , K(CONTROL_RIGHT)},
-    {K(Y)            , K(U)            , K(I)            , K(O)            , K(P)            , K(ALT_RIGHT)    },
-    {K(H)            , K(J)            , K(K)            , K(L)            , K(SEMICOLON)    , K(SHIFT_RIGHT)  },
-    {K(N)            , K(M)            , K(COMMA)        , K(PERIOD)       , K(SLASH)        , K(GUI_RIGHT)    },
-    {K(ESCAPE)       , K(ENTER)        , K(DELETE)       , K(ARROW_RIGHT)  , K(NONE)         , K(NONE)         },
+    {K(5)            , K(6)            , K(7)            , K(8)            , K(9)            , K(PAGE_UP)      },
+    {K(Y)            , K(U)            , K(I)            , K(O)            , K(P)            , K(DELETE)       },
+    {K(H)            , K(J)            , K(K)            , K(L)            , K(SEMICOLON)    , K(ALT_RIGHT)    },
+    {K(N)            , K(M)            , K(COMMA)        , K(PERIOD)       , K(SLASH)        , K(CONTROL_RIGHT)},
+    {K(ESCAPE)       , K(ENTER)        , K(SHIFT_RIGHT)  , K(GUI_RIGHT)    , K(NONE)         , K(NONE)         },
 };
 #undef K
 // clang-format on
@@ -153,7 +154,6 @@ int main(void) {
     irq_set_enabled(UART0_IRQ, true);
     uart_set_irq_enables(UART, true, false);
 
-    const uint8_t debounce_cycles = 5;
     // the debounce table only applies to the current controller
     // the other half takes care of its own debouncing
     uint8_t debounce_table[5][6];
@@ -204,7 +204,7 @@ int main(void) {
                         uint hid_key = this_key_table[row][col];
                         if (set_bit(set, hid_key, report)) {
                             changed = true;
-                            debounce_table[row][col] = debounce_cycles;
+                            debounce_table[row][col] = DEBOUNCE_CYCLES;
                         }
                     }
                 }
@@ -253,7 +253,7 @@ int main(void) {
                     } else {
                         bool set = gpio_get(gpio_cols[col]);
                         if (set != state_table[row][col]) {
-                            debounce_table[row][col] = debounce_cycles;
+                            debounce_table[row][col] = DEBOUNCE_CYCLES;
                             state_table[row][col] = set;
                             uint8_t value = count;
                             if (set)
