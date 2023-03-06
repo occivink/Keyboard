@@ -735,7 +735,7 @@ def main() -> int:
         + translate([-7.5,-7.5,0])(cube([15,15,.8])) # lip
         + translate([-7,-7,.8])(cube([14,14,2])) # top
         + translate([-10.3/2,-4.5/2,2.8])(cube([10.3,4.5,3])) # actuator
-        + translate([-9,-8.5,11-2.2-4])(cube([18,17,4])) # cap
+        + translate([-9,-8.5,11-2.2-4])(linear_extrude(height=4)(offset(r=1)(offset(r=-1)(square([18,17]))))) # cap
     )
     mx_shape = (cube(0)
         + translate([-7,-7,-4.5])(cube([14,14,4.5])) # bottom
