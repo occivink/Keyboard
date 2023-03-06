@@ -690,21 +690,21 @@ def make_top_and_bot(
         height,
     ):
     bot_shape = offset(delta=-wall_outer_width)(bot_shape)
-    bot = linear_extrude(height=bot_height)(bot_shape)
+    bot = linear_extrude(height=bot_height, convexity=2)(bot_shape)
     bot += bot_things
     bot -= bot_holes
-    bot *= linear_extrude(height=height)(bot_shape) # cut off protruding things (screws, for example
+    bot *= linear_extrude(height=height, convexity=2)(bot_shape) # cut off protruding things (screws, for example
 
-    wall = linear_extrude(height=height)(
+    wall = linear_extrude(height=height, convexity=2)(
         shape_no_holes - offset(delta=-wall_full_width)(shape_no_holes))
 
-    top = linear_extrude(height=top_height)(top_shape)
+    top = linear_extrude(height=top_height, convexity=2)(top_shape)
     top = translate([0,0,height-top_height])(top)
     top += (wall - bot) # make sure that the wall does not overlap with the bottom
     top += top_things
     top -= top_holes
     #top -= bot_holes
-    bot *= linear_extrude(height=height)(offset(delta=-bottom_recess)(bot_shape))
+    bot *= linear_extrude(height=height, convexity=2)(offset(delta=-bottom_recess)(bot_shape))
 
     return top, bot
 
